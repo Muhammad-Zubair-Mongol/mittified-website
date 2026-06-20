@@ -18,7 +18,10 @@ import {
   getTickerItems,
   saveTickerItems,
   deleteArticle,
-  deleteCreator
+  deleteCreator,
+  getNextActiveKey,
+  getSelectedModel,
+  saveSelectedModel
 } from "@/lib/supabase";
 import { auth, verifyAdminWhitelist, uploadImage, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -46,6 +49,8 @@ export default function AdminPage() {
 
   // Rotating keys states
   const [apiKeysInput, setApiKeysInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Live Drama Tracker ticker items states
   const [tickerItemsList, setTickerItemsList] = useState<string[]>([]);
@@ -143,6 +148,9 @@ export default function AdminPage() {
 
     const ticker = await getTickerItems();
     setTickerItemsList(ticker);
+
+    const model = await getSelectedModel();
+    setSelectedModel(model);
   }
 
   const handleAddWhitelistEmail = async (e: React.FormEvent) => {
@@ -235,6 +243,103 @@ export default function AdminPage() {
       alert("Failed to delete creator.");
     }
   };
+
+  const handleGenerateContent = async () => {
+    if (!artTitle.trim()) {
+      alert("Please enter an Article Title first to generate content.");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const activeKey = await getNextActiveKey();
+      if (!activeKey) {
+        alert("No API keys found in the rotation pool. Please paste some API keys below first.");
+        setIsGenerating(false);
+        return;
+      }
+
+      const promptText = `You are an investigative journalist tracking Pakistani YouTube ecosystem drama, metrics, and exposés.
+Generate complete article details based on this title: "${artTitle}".
+You MUST return a valid JSON object only. Do not wrap in markdown code block markers. Just return the raw JSON matching this interface:
+{
+  "summary": "Descriptive meta summary hook (max 150 characters)",
+  "content": "Detailed investigation article content in clean HTML containing multiple paragraphs (<p>), bold tags (<strong>), and headings (<h2>/<h3>) explaining the drama (max 400 words)",
+  "category": "Controversies" | "Milestones" | "Analysis",
+  "tags": ["Tag1", "Tag2", "Tag3"]
+}`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${activeKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: promptText,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              responseMimeType: "application/json",
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) {
+        throw new Error("No content generated in the response.");
+      }
+
+      let cleanText = rawText.trim();
+      if (cleanText.startsWith("```json")) {
+        cleanText = cleanText.substring(7);
+      }
+      if (cleanText.endsWith("```")) {
+        cleanText = cleanText.substring(0, cleanText.length - 3);
+      }
+      cleanText = cleanText.trim();
+
+      const parsed = JSON.parse(cleanText);
+      if (parsed.summary) setArtSummary(parsed.summary);
+      if (parsed.content) setArtContent(parsed.content);
+      if (parsed.category) setArtCategory(parsed.category);
+      if (parsed.tags) {
+        if (Array.isArray(parsed.tags)) {
+          setArtTags(parsed.tags.join(", "));
+        } else {
+          setArtTags(parsed.tags);
+        }
+      }
+      
+      setArtSlug(artTitle.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, ""));
+      
+      alert("Content auto-generated successfully using model: " + selectedModel);
+    } catch (e) {
+      console.error("AI Generation Error", e);
+      alert("AI Generation failed: " + (e as Error).message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveSelectedModel = async (model: string) => {
+    setSelectedModel(model);
+    await saveSelectedModel(model);
+  };
+
 
 
   const handleSaveApiKeys = async (e: React.FormEvent) => {
@@ -396,19 +501,28 @@ export default function AdminPage() {
               </h2>
               
               <form onSubmit={handleAddArticle} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                  <div>
                     <label className="text-xs text-zinc-400 font-mono block mb-1">Article Title</label>
-                    <input 
-                      type="text" 
-                      value={artTitle} 
-                      onChange={(e) => {
-                        setArtTitle(e.target.value);
-                        setArtSlug(e.target.value.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, ""));
-                      }}
-                      placeholder="e.g. Raza Samo Podcast Fallout Explored"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                    />
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={artTitle} 
+                        onChange={(e) => {
+                          setArtTitle(e.target.value);
+                          setArtSlug(e.target.value.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, ""));
+                        }}
+                        placeholder="e.g. Raza Samo Podcast Fallout Explored"
+                        className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleGenerateContent}
+                        disabled={isGenerating}
+                        className="px-3 py-2 bg-[#FFD700]/10 hover:bg-[#FFD700]/25 text-[#FFD700] border border-[#FFD700]/30 rounded text-xs font-semibold font-mono tracking-wide transition-colors flex items-center gap-1.5 disabled:opacity-50 shrink-0"
+                      >
+                        {isGenerating ? "Generating..." : "✨ Auto-Fill"}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-zinc-400 font-mono block mb-1">Slug URL</label>
@@ -805,14 +919,33 @@ export default function AdminPage() {
               <p className="text-[10px] text-zinc-500 font-sans leading-relaxed mb-3">
                 Paste bulk API keys (one key per line) to automatically cycle and avoid single-key quota blocks.
               </p>
+
+              {/* Customizable Gemini Model Selector */}
+              <div className="mb-4">
+                <label className="text-[10px] text-zinc-400 font-mono block mb-1">Gemini Model for AI Generation</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleSaveSelectedModel(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:border-[#FFD700] outline-none"
+                >
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & Balanced)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (High intelligence)</option>
+                  <option value="gemini-1.5-flash">gemini-1.5-flash (Fallback legacy)</option>
+                  <option value="gemini-1.5-pro">gemini-1.5-pro (Fallback legacy pro)</option>
+                </select>
+              </div>
+
               <form onSubmit={handleSaveApiKeys} className="space-y-3">
-                <textarea
-                  value={apiKeysInput}
-                  onChange={(e) => setApiKeysInput(e.target.value)}
-                  rows={4}
-                  placeholder="AIzaSy...&#10;AIzaSy..."
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none font-mono"
-                />
+                <div>
+                  <label className="text-[10px] text-zinc-400 font-mono block mb-1">API Key Pool</label>
+                  <textarea
+                    value={apiKeysInput}
+                    onChange={(e) => setApiKeysInput(e.target.value)}
+                    rows={4}
+                    placeholder="AIzaSy...&#10;AIzaSy..."
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none font-mono"
+                  />
+                </div>
                 <button
                   type="submit"
                   className="w-full bg-[#FFD700]/10 border border-[#FFD700]/30 hover:bg-[#FFD700]/20 text-[#FFD700] font-semibold text-xs py-2.5 rounded transition-all"

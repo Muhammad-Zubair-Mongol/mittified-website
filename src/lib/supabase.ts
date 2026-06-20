@@ -20,6 +20,8 @@ import {
   saveTickerItemsFb,
   deleteArticleFb,
   deleteCreatorFb,
+  getSelectedModelFb,
+  saveSelectedModelFb,
   NavLink
 } from "./firebase";
 import { Creator, Article } from "./mockData";
@@ -100,6 +102,14 @@ export async function deleteArticle(id: string): Promise<boolean> {
 
 export async function deleteCreator(id: string): Promise<boolean> {
   return deleteCreatorFb(id);
+}
+
+export async function getSelectedModel(): Promise<string> {
+  return getSelectedModelFb();
+}
+
+export async function saveSelectedModel(model: string): Promise<boolean> {
+  return saveSelectedModelFb(model);
 }
 
 

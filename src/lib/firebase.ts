@@ -245,13 +245,53 @@ export async function saveRotatingKeysFb(keys: string[]): Promise<boolean> {
   if (db) {
     try {
       const configDoc = doc(db, "site_config", "api_keys");
-      await setDoc(configDoc, { keys: cleanKeys });
+      const snap = await getDoc(configDoc);
+      const currentData = snap.exists() ? snap.data() : {};
+      await setDoc(configDoc, { ...currentData, keys: cleanKeys });
     } catch (e) {
       console.error("Firestore saveRotatingKeys error", e);
     }
   }
   if (typeof window !== "undefined") {
     localStorage.setItem(LOCAL_ROTATING_KEYS_KEY, JSON.stringify(cleanKeys));
+    return true;
+  }
+  return false;
+}
+
+export async function getSelectedModelFb(): Promise<string> {
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "api_keys");
+      const snap = await getDoc(configDoc);
+      if (snap.exists() && snap.data().model) {
+        return snap.data().model;
+      }
+    } catch (e) {
+      console.error("Firestore getSelectedModel error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("mittified_selected_model") || "gemini-2.5-flash";
+  }
+  return "gemini-2.5-flash";
+}
+
+export async function saveSelectedModelFb(model: string): Promise<boolean> {
+  const cleanModel = model.trim() || "gemini-2.5-flash";
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "api_keys");
+      const snap = await getDoc(configDoc);
+      const currentData = snap.exists() ? snap.data() : {};
+      await setDoc(configDoc, { ...currentData, model: cleanModel });
+      return true;
+    } catch (e) {
+      console.error("Firestore saveSelectedModel error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem("mittified_selected_model", cleanModel);
     return true;
   }
   return false;
