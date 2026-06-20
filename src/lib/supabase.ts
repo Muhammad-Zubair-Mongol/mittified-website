@@ -16,6 +16,8 @@ import {
   getRotatingKeysFb,
   saveRotatingKeysFb,
   getNextActiveKeyFb,
+  getTickerItemsFb,
+  saveTickerItemsFb,
   NavLink
 } from "./firebase";
 import { Creator, Article } from "./mockData";
@@ -80,3 +82,13 @@ export async function saveRotatingKeys(keys: string[]): Promise<boolean> {
 export async function getNextActiveKey(): Promise<string | null> {
   return getNextActiveKeyFb();
 }
+
+// Export Live Drama Tracker (ticker) functions
+export async function getTickerItems(): Promise<string[]> {
+  return getTickerItemsFb();
+}
+
+export async function saveTickerItems(items: string[]): Promise<boolean> {
+  return saveTickerItemsFb(items);
+}
+

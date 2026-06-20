@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Flame, ShieldAlert, TrendingUp, Menu, X, PlusCircle, LogOut } from "lucide-react";
-import { auth, verifyAdminWhitelist, getNavLinksFb, NavLink } from "@/lib/firebase";
+import { auth, verifyAdminWhitelist, getNavLinksFb, getTickerItemsFb, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 
 const YoutubeIcon = ({ className }: { className?: string }) => (
@@ -22,21 +22,29 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tickerIndex, setTickerIndex] = useState(0);
   const [navLinks, setNavLinks] = useState<NavLink[]>([]);
-
-  useEffect(() => {
-    async function loadLinks() {
-      const links = await getNavLinksFb();
-      setNavLinks(links);
-    }
-    loadLinks();
-  }, []);
-
-  const tickerItems = [
+  const [tickerItems, setTickerItems] = useState<string[]>([
     "URGENT: Raza Samo drops 20-min tell-all podcast response.",
     "MILESTONE: Ducky Bhai officially crosses 8.4M subscribers.",
     "ALGORITHM WATCH: Cinematic vlogs face record low recommendation rates.",
     "TRENDING: #PakistaniYouTubeDrama tags dominate Twitter trends."
-  ];
+  ]);
+
+  useEffect(() => {
+    async function loadLinksAndTicker() {
+      try {
+        const links = await getNavLinksFb();
+        setNavLinks(links);
+        
+        const items = await getTickerItemsFb();
+        if (items && items.length > 0) {
+          setTickerItems(items);
+        }
+      } catch (e) {
+        console.error("Failed to load header navigation or ticker", e);
+      }
+    }
+    loadLinksAndTicker();
+  }, []);
 
   useEffect(() => {
     if (auth) {
@@ -60,11 +68,13 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
   }, []);
 
   useEffect(() => {
+    if (tickerItems.length === 0) return;
     const interval = setInterval(() => {
       setTickerIndex((prev) => (prev + 1) % tickerItems.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [tickerItems]);
+
 
   const handleSignOut = async () => {
     if (auth) {

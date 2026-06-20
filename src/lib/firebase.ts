@@ -42,6 +42,7 @@ const LOCAL_ARTICLES_KEY = "mittified_articles_fb";
 const LOCAL_ADMINS_KEY = "mittified_admins_fb";
 const LOCAL_NAV_LINKS_KEY = "mittified_nav_links";
 const LOCAL_ROTATING_KEYS_KEY = "mittified_rotating_keys";
+const LOCAL_TICKER_ITEMS_KEY = "mittified_ticker_items";
 
 if (typeof window !== "undefined") {
   if (!localStorage.getItem(LOCAL_CREATORS_KEY)) {
@@ -56,6 +57,15 @@ if (typeof window !== "undefined") {
       "admin@mittified.media",
       "mitti@mittified.media",
       "mittifiedbusiness@gmail.com"
+    ]));
+  }
+  // Seeding default Live Drama Tracker items
+  if (!localStorage.getItem(LOCAL_TICKER_ITEMS_KEY)) {
+    localStorage.setItem(LOCAL_TICKER_ITEMS_KEY, JSON.stringify([
+      "URGENT: Raza Samo drops 20-min tell-all podcast response.",
+      "MILESTONE: Ducky Bhai officially crosses 8.4M subscribers.",
+      "ALGORITHM WATCH: Cinematic vlogs face record low recommendation rates.",
+      "TRENDING: #PakistaniYouTubeDrama tags dominate Twitter trends."
     ]));
   }
   // Seeding default dynamic navigation links
@@ -257,6 +267,46 @@ export async function getNextActiveKeyFb(): Promise<string | null> {
   await saveRotatingKeysFb(rotated);
   
   return activeKey;
+}
+
+export async function getTickerItemsFb(): Promise<string[]> {
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "ticker");
+      const snap = await getDoc(configDoc);
+      if (snap.exists()) {
+        return snap.data().items || [];
+      }
+    } catch (e) {
+      console.error("Firestore getTickerItems error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_TICKER_ITEMS_KEY) || "[]");
+  }
+  return [
+    "URGENT: Raza Samo drops 20-min tell-all podcast response.",
+    "MILESTONE: Ducky Bhai officially crosses 8.4M subscribers.",
+    "ALGORITHM WATCH: Cinematic vlogs face record low recommendation rates.",
+    "TRENDING: #PakistaniYouTubeDrama tags dominate Twitter trends."
+  ];
+}
+
+export async function saveTickerItemsFb(items: string[]): Promise<boolean> {
+  const cleanItems = items.map(i => i.trim()).filter(Boolean);
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "ticker");
+      await setDoc(configDoc, { items: cleanItems });
+    } catch (e) {
+      console.error("Firestore saveTickerItems error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_TICKER_ITEMS_KEY, JSON.stringify(cleanItems));
+    return true;
+  }
+  return false;
 }
 
 // DATA OPERATIONS GET / SET

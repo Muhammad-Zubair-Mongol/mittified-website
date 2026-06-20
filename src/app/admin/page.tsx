@@ -14,12 +14,14 @@ import {
   getNavLinks,
   saveNavLinks,
   getRotatingKeys,
-  saveRotatingKeys
+  saveRotatingKeys,
+  getTickerItems,
+  saveTickerItems
 } from "@/lib/supabase";
 import { auth, verifyAdminWhitelist, uploadImage, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { Creator, Article } from "@/lib/mockData";
-import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut, Key, Link2, Trash2 } from "lucide-react";
+import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut, Key, Link2, Trash2, Flame } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {
@@ -42,6 +44,10 @@ export default function AdminPage() {
 
   // Rotating keys states
   const [apiKeysInput, setApiKeysInput] = useState("");
+
+  // Live Drama Tracker ticker items states
+  const [tickerItemsList, setTickerItemsList] = useState<string[]>([]);
+  const [newTickerItem, setNewTickerItem] = useState("");
 
   // Update states
   const [selectedCreatorId, setSelectedCreatorId] = useState("");
@@ -132,6 +138,9 @@ export default function AdminPage() {
 
     const keys = await getRotatingKeys();
     setApiKeysInput(keys.join("\n"));
+
+    const ticker = await getTickerItems();
+    setTickerItemsList(ticker);
   }
 
   const handleAddWhitelistEmail = async (e: React.FormEvent) => {
@@ -176,6 +185,27 @@ export default function AdminPage() {
     if (success) {
       setNavLinksList(updated);
       alert("Navigation link removed!");
+    }
+  };
+
+  const handleAddTickerItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTickerItem.trim()) return;
+    const updated = [...tickerItemsList, newTickerItem.trim()];
+    const success = await saveTickerItems(updated);
+    if (success) {
+      setTickerItemsList(updated);
+      setNewTickerItem("");
+      alert("Drama alert added to ticker!");
+    }
+  };
+
+  const handleRemoveTickerItem = async (index: number) => {
+    const updated = tickerItemsList.filter((_, i) => i !== index);
+    const success = await saveTickerItems(updated);
+    if (success) {
+      setTickerItemsList(updated);
+      alert("Drama alert removed!");
     }
   };
 
@@ -662,6 +692,42 @@ export default function AdminPage() {
                       onClick={() => handleRemoveNavLink(index)}
                       className="text-red-500 hover:text-red-400 p-1"
                       title="Remove Link"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Live Drama Tracker Ticker CRUD */}
+            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+                <Flame className="text-[#FFD700] w-4 h-4 text-rose-500 animate-pulse" /> Live Drama Tracker CRUD
+              </h2>
+              <form onSubmit={handleAddTickerItem} className="space-y-2.5 mb-4">
+                <input 
+                  type="text" 
+                  value={newTickerItem} 
+                  onChange={(e) => setNewTickerItem(e.target.value)}
+                  placeholder="Ticker Item Text (e.g., URGENT: Ducky Bhai...)"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-colors"
+                >
+                  Add Ticker Alert
+                </button>
+              </form>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {tickerItemsList.map((item, index) => (
+                  <div key={item + index} className="flex items-start justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+                    <span className="text-zinc-300 leading-normal pr-2">{item}</span>
+                    <button
+                      onClick={() => handleRemoveTickerItem(index)}
+                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0"
+                      title="Remove Ticker Alert"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
