@@ -923,16 +923,23 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
               {/* Customizable Gemini Model Selector */}
               <div className="mb-4">
                 <label className="text-[10px] text-zinc-400 font-mono block mb-1">Gemini Model for AI Generation</label>
-                <select
+                <input
+                  type="text"
                   value={selectedModel}
                   onChange={(e) => handleSaveSelectedModel(e.target.value)}
+                  placeholder="e.g. gemini-2.5-flash"
+                  list="gemini-models"
                   className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:border-[#FFD700] outline-none"
-                >
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (Fast & Balanced)</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro (High intelligence)</option>
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (Fallback legacy)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (Fallback legacy pro)</option>
-                </select>
+                />
+                <datalist id="gemini-models">
+                  <option value="gemini-2.5-flash" />
+                  <option value="gemini-2.5-pro" />
+                  <option value="gemini-1.5-flash" />
+                  <option value="gemini-1.5-pro" />
+                </datalist>
+                <p className="text-[9px] text-zinc-550 font-mono mt-1">
+                  Type any custom/future model name (e.g., custom fine-tuned models).
+                </p>
               </div>
 
               <form onSubmit={handleSaveApiKeys} className="space-y-3">
