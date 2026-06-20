@@ -14,10 +14,9 @@ import {
   getNavLinks,
   saveNavLinks,
   getRotatingKeys,
-  saveRotatingKeys,
-  NavLink
+  saveRotatingKeys
 } from "@/lib/supabase";
-import { auth, verifyAdminWhitelist, uploadImage } from "@/lib/firebase";
+import { auth, verifyAdminWhitelist, uploadImage, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { Creator, Article } from "@/lib/mockData";
 import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut, Key, Link2, Trash2 } from "lucide-react";
