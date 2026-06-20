@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Flame, ShieldAlert, TrendingUp, Menu, X, PlusCircle, LogOut } from "lucide-react";
-import { auth, verifyAdminWhitelist } from "@/lib/firebase";
+import { auth, verifyAdminWhitelist, getNavLinksFb, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 
 const YoutubeIcon = ({ className }: { className?: string }) => (
@@ -21,6 +21,15 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [tickerIndex, setTickerIndex] = useState(0);
+  const [navLinks, setNavLinks] = useState<NavLink[]>([]);
+
+  useEffect(() => {
+    async function loadLinks() {
+      const links = await getNavLinksFb();
+      setNavLinks(links);
+    }
+    loadLinks();
+  }, []);
 
   const tickerItems = [
     "URGENT: Raza Samo drops 20-min tell-all podcast response.",
@@ -109,10 +118,11 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-300">
-            <Link href="/" className="hover:text-[#FFD700] transition-colors">Home</Link>
-            <Link href="/creators" className="hover:text-[#FFD700] transition-colors">Creator DB</Link>
-            <Link href="/#news" className="hover:text-[#FFD700] transition-colors">Exposés</Link>
-            <Link href="/#analysis" className="hover:text-[#FFD700] transition-colors">Analysis</Link>
+            {navLinks.map((link) => (
+              <Link key={link.label} href={link.href} className="hover:text-[#FFD700] transition-colors">
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
 
@@ -156,34 +166,16 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-zinc-950 border-t border-zinc-800 px-4 pt-2 pb-4 space-y-2">
-          <Link
-            href="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-900"
-          >
-            Home
-          </Link>
-          <Link
-            href="/creators"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-900"
-          >
-            Creator DB
-          </Link>
-          <Link
-            href="/#news"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-900"
-          >
-            Exposés
-          </Link>
-          <Link
-            href="/#analysis"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-900"
-          >
-            Analysis
-          </Link>
+          {navLinks.map((link) => (
+            <Link
+              key={link.label}
+              href={link.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-2 rounded-md text-base font-medium text-zinc-300 hover:text-white hover:bg-zinc-900"
+            >
+              {link.label}
+            </Link>
+          ))}
           <div className="border-t border-zinc-800 pt-2 mt-2">
             {isAdmin ? (
               <div className="flex flex-col gap-2">

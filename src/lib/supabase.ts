@@ -7,7 +7,16 @@ import {
   getArticleBySlugFb, 
   updateCreatorDramaMeterFb, 
   addArticleFb, 
-  addCreatorFb 
+  addCreatorFb,
+  getWhitelistedAdminsFb,
+  addWhitelistedAdminFb,
+  removeWhitelistedAdminFb,
+  getNavLinksFb,
+  saveNavLinksFb,
+  getRotatingKeysFb,
+  saveRotatingKeysFb,
+  getNextActiveKeyFb,
+  NavLink
 } from "./firebase";
 import { Creator, Article } from "./mockData";
 
@@ -35,4 +44,39 @@ export async function addArticle(article: Omit<Article, "id" | "publishedAt">): 
 
 export async function addCreator(creator: Omit<Creator, "id">): Promise<Creator | null> {
   return addCreatorFb(creator);
+}
+
+// Export admin whitelist functions
+export async function getWhitelistedAdmins(): Promise<string[]> {
+  return getWhitelistedAdminsFb();
+}
+
+export async function addWhitelistedAdmin(email: string): Promise<boolean> {
+  return addWhitelistedAdminFb(email);
+}
+
+export async function removeWhitelistedAdmin(email: string): Promise<boolean> {
+  return removeWhitelistedAdminFb(email);
+}
+
+// Export dynamic nav links functions
+export async function getNavLinks(): Promise<NavLink[]> {
+  return getNavLinksFb();
+}
+
+export async function saveNavLinks(links: NavLink[]): Promise<boolean> {
+  return saveNavLinksFb(links);
+}
+
+// Export API rotation functions
+export async function getRotatingKeys(): Promise<string[]> {
+  return getRotatingKeysFb();
+}
+
+export async function saveRotatingKeys(keys: string[]): Promise<boolean> {
+  return saveRotatingKeysFb(keys);
+}
+
+export async function getNextActiveKey(): Promise<string | null> {
+  return getNextActiveKeyFb();
 }

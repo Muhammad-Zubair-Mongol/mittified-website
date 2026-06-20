@@ -2,11 +2,25 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getCreators, getArticles, addArticle, updateCreatorDramaMeter, addCreator } from "@/lib/supabase";
+import { 
+  getCreators, 
+  getArticles, 
+  addArticle, 
+  updateCreatorDramaMeter, 
+  addCreator,
+  getWhitelistedAdmins,
+  addWhitelistedAdmin,
+  removeWhitelistedAdmin,
+  getNavLinks,
+  saveNavLinks,
+  getRotatingKeys,
+  saveRotatingKeys,
+  NavLink
+} from "@/lib/supabase";
 import { auth, verifyAdminWhitelist, uploadImage } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { Creator, Article } from "@/lib/mockData";
-import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut } from "lucide-react";
+import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut, Key, Link2, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {
@@ -17,6 +31,18 @@ export default function AdminPage() {
   // Lists
   const [creators, setCreators] = useState<Creator[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+
+  // Whitelist admin states
+  const [whitelistEmails, setWhitelistEmails] = useState<string[]>([]);
+  const [newWhitelistEmail, setNewWhitelistEmail] = useState("");
+
+  // Navigation link states
+  const [navLinksList, setNavLinksList] = useState<NavLink[]>([]);
+  const [newNavLinkLabel, setNewNavLinkLabel] = useState("");
+  const [newNavLinkHref, setNewNavLinkHref] = useState("");
+
+  // Rotating keys states
+  const [apiKeysInput, setApiKeysInput] = useState("");
 
   // Update states
   const [selectedCreatorId, setSelectedCreatorId] = useState("");
@@ -98,7 +124,70 @@ export default function AdminPage() {
     const aData = await getArticles();
     setCreators(cData);
     setArticles(aData);
+
+    const admins = await getWhitelistedAdmins();
+    setWhitelistEmails(admins);
+
+    const links = await getNavLinks();
+    setNavLinksList(links);
+
+    const keys = await getRotatingKeys();
+    setApiKeysInput(keys.join("\n"));
   }
+
+  const handleAddWhitelistEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWhitelistEmail.trim()) return;
+    const success = await addWhitelistedAdmin(newWhitelistEmail);
+    if (success) {
+      setWhitelistEmails(prev => [...prev, newWhitelistEmail.toLowerCase().trim()]);
+      setNewWhitelistEmail("");
+      alert("Admin email whitelisted successfully!");
+    }
+  };
+
+  const handleRemoveWhitelistEmail = async (email: string) => {
+    if (email.toLowerCase() === "mittifiedbusiness@gmail.com") {
+      alert("Cannot remove the master bypass administrator email.");
+      return;
+    }
+    const success = await removeWhitelistedAdmin(email);
+    if (success) {
+      setWhitelistEmails(prev => prev.filter(e => e !== email));
+      alert("Admin email removed from whitelist.");
+    }
+  };
+
+  const handleAddNavLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNavLinkLabel.trim() || !newNavLinkHref.trim()) return;
+    const updated = [...navLinksList, { label: newNavLinkLabel, href: newNavLinkHref }];
+    const success = await saveNavLinks(updated);
+    if (success) {
+      setNavLinksList(updated);
+      setNewNavLinkLabel("");
+      setNewNavLinkHref("");
+      alert("Navigation link added!");
+    }
+  };
+
+  const handleRemoveNavLink = async (index: number) => {
+    const updated = navLinksList.filter((_, i) => i !== index);
+    const success = await saveNavLinks(updated);
+    if (success) {
+      setNavLinksList(updated);
+      alert("Navigation link removed!");
+    }
+  };
+
+  const handleSaveApiKeys = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const keysArray = apiKeysInput.split("\n").map(k => k.trim()).filter(Boolean);
+    const success = await saveRotatingKeys(keysArray);
+    if (success) {
+      alert("Rotating API keys updated successfully!");
+    }
+  };
 
   const handleUpdateDrama = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -496,6 +585,115 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Whitelisted Admins List & CRUD */}
+            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+                🛡️ Whitelisted Admins ({whitelistEmails.length})
+              </h2>
+              <form onSubmit={handleAddWhitelistEmail} className="flex gap-2 mb-4">
+                <input 
+                  type="email" 
+                  value={newWhitelistEmail} 
+                  onChange={(e) => setNewWhitelistEmail(e.target.value)}
+                  placeholder="admin@domain.com"
+                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-bold text-xs px-3 py-1.5 rounded transition-colors"
+                >
+                  Whitelist
+                </button>
+              </form>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {whitelistEmails.map((email) => (
+                  <div key={email} className="flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+                    <span className="truncate max-w-[180px] text-zinc-350">{email}</span>
+                    {email !== "mittifiedbusiness@gmail.com" && (
+                      <button
+                        onClick={() => handleRemoveWhitelistEmail(email)}
+                        className="text-red-500 hover:text-red-400 p-1"
+                        title="Remove Whitelist"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Dynamic Navigation Links CRUD */}
+            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+                <Link2 className="text-[#FFD700] w-4 h-4" /> Header Links CRUD
+              </h2>
+              <form onSubmit={handleAddNavLink} className="space-y-2.5 mb-4">
+                <input 
+                  type="text" 
+                  value={newNavLinkLabel} 
+                  onChange={(e) => setNewNavLinkLabel(e.target.value)}
+                  placeholder="Link Label (e.g., Blog)"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+                />
+                <input 
+                  type="text" 
+                  value={newNavLinkHref} 
+                  onChange={(e) => setNewNavLinkHref(e.target.value)}
+                  placeholder="Href Target (e.g., /#blog)"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-colors"
+                >
+                  Create Navigation Link
+                </button>
+              </form>
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {navLinksList.map((link, index) => (
+                  <div key={link.label + index} className="flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+                    <div>
+                      <span className="font-bold text-zinc-300">{link.label}</span>
+                      <span className="text-[10px] text-zinc-500 block">{link.href}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveNavLink(index)}
+                      className="text-red-500 hover:text-red-400 p-1"
+                      title="Remove Link"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Rotating API Keys Setup */}
+            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+                <Key className="text-[#FFD700] w-4 h-4" /> Rotating API Keys Pool
+              </h2>
+              <p className="text-[10px] text-zinc-500 font-sans leading-relaxed mb-3">
+                Paste bulk API keys (one key per line) to automatically cycle and avoid single-key quota blocks.
+              </p>
+              <form onSubmit={handleSaveApiKeys} className="space-y-3">
+                <textarea
+                  value={apiKeysInput}
+                  onChange={(e) => setApiKeysInput(e.target.value)}
+                  rows={4}
+                  placeholder="AIzaSy...&#10;AIzaSy..."
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none font-mono"
+                />
+                <button
+                  type="submit"
+                  className="w-full bg-[#FFD700]/10 border border-[#FFD700]/30 hover:bg-[#FFD700]/20 text-[#FFD700] font-semibold text-xs py-2.5 rounded transition-all"
+                >
+                  Save & Update Rotation Pool
+                </button>
+              </form>
             </div>
 
           </div>

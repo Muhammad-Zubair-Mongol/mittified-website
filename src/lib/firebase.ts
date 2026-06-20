@@ -40,6 +40,8 @@ export async function uploadImage(file: File, folder: string): Promise<string | 
 const LOCAL_CREATORS_KEY = "mittified_creators_fb";
 const LOCAL_ARTICLES_KEY = "mittified_articles_fb";
 const LOCAL_ADMINS_KEY = "mittified_admins_fb";
+const LOCAL_NAV_LINKS_KEY = "mittified_nav_links";
+const LOCAL_ROTATING_KEYS_KEY = "mittified_rotating_keys";
 
 if (typeof window !== "undefined") {
   if (!localStorage.getItem(LOCAL_CREATORS_KEY)) {
@@ -56,20 +58,97 @@ if (typeof window !== "undefined") {
       "mittifiedbusiness@gmail.com"
     ]));
   }
+  // Seeding default dynamic navigation links
+  if (!localStorage.getItem(LOCAL_NAV_LINKS_KEY)) {
+    localStorage.setItem(LOCAL_NAV_LINKS_KEY, JSON.stringify([
+      { label: "Home", href: "/" },
+      { label: "Creator DB", href: "/creators" },
+      { label: "Exposés", href: "/#news" },
+      { label: "Analysis", href: "/#analysis" }
+    ]));
+  }
+  // Seeding rotating API keys
+  if (!localStorage.getItem(LOCAL_ROTATING_KEYS_KEY)) {
+    localStorage.setItem(LOCAL_ROTATING_KEYS_KEY, JSON.stringify([]));
+  }
+}
+
+// Whitelist Email Management Operations
+export async function getWhitelistedAdminsFb(): Promise<string[]> {
+  if (db) {
+    try {
+      const adminsCol = collection(db, "admins");
+      const snap = await getDocs(adminsCol);
+      const list = snap.docs.map(doc => doc.id.toLowerCase());
+      if (list.length > 0) return list;
+    } catch (e) {
+      console.error("Firestore getWhitelistedAdmins error, falling back", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_ADMINS_KEY) || "[]");
+  }
+  return ["mittifiedbusiness@gmail.com"];
+}
+
+export async function addWhitelistedAdminFb(email: string): Promise<boolean> {
+  const cleanEmail = email.toLowerCase().trim();
+  if (db) {
+    try {
+      const adminDocRef = doc(db, "admins", cleanEmail);
+      await setDoc(adminDocRef, { addedAt: new Date().toISOString() });
+      return true;
+    } catch (e) {
+      console.error("Firestore addWhitelistedAdmin error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const list = await getWhitelistedAdminsFb();
+    if (!list.includes(cleanEmail)) {
+      list.push(cleanEmail);
+      localStorage.setItem(LOCAL_ADMINS_KEY, JSON.stringify(list));
+    }
+    return true;
+  }
+  return false;
+}
+
+export async function removeWhitelistedAdminFb(email: string): Promise<boolean> {
+  const cleanEmail = email.toLowerCase().trim();
+  if (db) {
+    try {
+      const adminDocRef = doc(db, "admins", cleanEmail);
+      // Using deleteDoc is standard, we import it if needed or set field if db active
+      // For local fallback/transition, we can deleteDoc
+      const { deleteDoc } = await import("firebase/firestore");
+      await deleteDoc(adminDocRef);
+      return true;
+    } catch (e) {
+      console.error("Firestore removeWhitelistedAdmin error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const list = await getWhitelistedAdminsFb();
+    const updated = list.filter(e => e !== cleanEmail);
+    localStorage.setItem(LOCAL_ADMINS_KEY, JSON.stringify(updated));
+    return true;
+  }
+  return false;
 }
 
 // Check whitelist access: Returns true if user's email is in whitelisted database collection
 export async function verifyAdminWhitelist(email: string | null): Promise<boolean> {
   if (!email) return false;
 
+  const cleanEmail = email.toLowerCase().trim();
   // Master admin bypass rule
-  if (email.toLowerCase() === "mittifiedbusiness@gmail.com") {
+  if (cleanEmail === "mittifiedbusiness@gmail.com") {
     return true;
   }
 
   if (db) {
     try {
-      const adminDocRef = doc(db, "admins", email);
+      const adminDocRef = doc(db, "admins", cleanEmail);
       const adminSnap = await getDoc(adminDocRef);
       return adminSnap.exists();
     } catch (e) {
@@ -80,10 +159,104 @@ export async function verifyAdminWhitelist(email: string | null): Promise<boolea
 
   // Simulated fallback
   if (typeof window !== "undefined") {
-    const whitelist: string[] = JSON.parse(localStorage.getItem(LOCAL_ADMINS_KEY) || "[]");
-    return whitelist.includes(email.toLowerCase());
+    const whitelist = await getWhitelistedAdminsFb();
+    return whitelist.includes(cleanEmail);
   }
   return false;
+}
+
+// Dynamic Navigation Link CRUD Operations
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export async function getNavLinksFb(): Promise<NavLink[]> {
+  if (db) {
+    try {
+      const navCol = collection(db, "nav_links");
+      const snap = await getDocs(navCol);
+      const list = snap.docs.map(doc => doc.data() as NavLink);
+      if (list.length > 0) return list;
+    } catch (e) {
+      console.error("Firestore getNavLinks error, falling back", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_NAV_LINKS_KEY) || "[]");
+  }
+  return [
+    { label: "Home", href: "/" },
+    { label: "Creator DB", href: "/creators" },
+    { label: "Exposés", href: "/#news" },
+    { label: "Analysis", href: "/#analysis" }
+  ];
+}
+
+export async function saveNavLinksFb(links: NavLink[]): Promise<boolean> {
+  if (db) {
+    try {
+      // Clear and rewrite nav_links collection to keep order or write doc
+      // For simplicity in client transition we write a config document or store in local storage
+      const configDoc = doc(db, "site_config", "navigation");
+      await setDoc(configDoc, { links });
+    } catch (e) {
+      console.error("Firestore saveNavLinks error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_NAV_LINKS_KEY, JSON.stringify(links));
+    return true;
+  }
+  return false;
+}
+
+// Rotating API Keys Operations
+export async function getRotatingKeysFb(): Promise<string[]> {
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "api_keys");
+      const snap = await getDoc(configDoc);
+      if (snap.exists()) {
+        return snap.data().keys || [];
+      }
+    } catch (e) {
+      console.error("Firestore getRotatingKeys error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_ROTATING_KEYS_KEY) || "[]");
+  }
+  return [];
+}
+
+export async function saveRotatingKeysFb(keys: string[]): Promise<boolean> {
+  const cleanKeys = keys.map(k => k.trim()).filter(Boolean);
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "api_keys");
+      await setDoc(configDoc, { keys: cleanKeys });
+    } catch (e) {
+      console.error("Firestore saveRotatingKeys error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_ROTATING_KEYS_KEY, JSON.stringify(cleanKeys));
+    return true;
+  }
+  return false;
+}
+
+export async function getNextActiveKeyFb(): Promise<string | null> {
+  const keys = await getRotatingKeysFb();
+  if (keys.length === 0) return null;
+  
+  // Rotate keys: move first key to the end
+  const activeKey = keys[0];
+  const rotated = [...keys.slice(1), activeKey];
+  await saveRotatingKeysFb(rotated);
+  
+  return activeKey;
 }
 
 // DATA OPERATIONS GET / SET
