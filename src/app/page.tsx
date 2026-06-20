@@ -61,7 +61,7 @@ export default async function Home() {
                 <div>
                   <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono mb-3">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
+                      <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
                       {new Date(mainFeatured.publishedAt).toLocaleDateString()}
                     </span>
                     <span>By {mainFeatured.author}</span>
@@ -78,7 +78,7 @@ export default async function Home() {
                     href={`/articles/${mainFeatured.slug}`}
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FFD700] uppercase tracking-wider group/link hover:underline"
                   >
-                    Read Full Investigation <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                    Read Full Investigation <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" aria-hidden="true" />
                   </Link>
                 </div>
               </div>

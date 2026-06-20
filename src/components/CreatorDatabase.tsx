@@ -64,7 +64,9 @@ export default function CreatorDatabase() {
           {/* Search Box */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
+            <label htmlFor="creator-search" className="sr-only">Search creator or handle</label>
             <input
+              id="creator-search"
               type="text"
               placeholder="Search creator or handle..."
               value={search}
@@ -76,7 +78,9 @@ export default function CreatorDatabase() {
           {/* Category Filter */}
           <div className="flex items-center gap-2">
             <Filter className="text-zinc-500 w-4 h-4 shrink-0" />
+            <label htmlFor="creator-category" className="sr-only">Filter by category</label>
             <select
+              id="creator-category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-300 outline-none focus:border-[#FFD700]"
@@ -90,7 +94,9 @@ export default function CreatorDatabase() {
           {/* Status Filter */}
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="text-zinc-500 w-4 h-4 shrink-0" />
+            <label htmlFor="creator-status" className="sr-only">Filter by status</label>
             <select
+              id="creator-status"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-300 outline-none focus:border-[#FFD700]"
@@ -103,8 +109,9 @@ export default function CreatorDatabase() {
 
           {/* Sort selection */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 font-mono shrink-0">Sort By</span>
+            <label htmlFor="creator-sort" className="text-xs text-zinc-500 font-mono shrink-0">Sort By</label>
             <select
+              id="creator-sort"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "subs" | "drama" | "views")}
               className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-300 outline-none focus:border-[#FFD700]"

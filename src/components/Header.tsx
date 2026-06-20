@@ -7,7 +7,7 @@ import { auth, verifyAdminWhitelist, getNavLinksFb, getTickerItemsFb, NavLink } 
 import { signOut } from "firebase/auth";
 
 const YoutubeIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.52 3.545 12 3.545 12 3.545s-7.52 0-9.388.508a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.868.507 9.388.507 9.388.507s7.52 0 9.388-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
   </svg>
 );
@@ -167,8 +167,10 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="text-zinc-400 hover:text-white p-2"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
           </button>
         </div>
       </div>

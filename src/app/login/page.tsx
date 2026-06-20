@@ -65,7 +65,7 @@ export default function LoginPage() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <Link href="/" className="inline-flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white mb-8 mx-auto uppercase">
-          <ArrowLeft className="w-4 h-4" /> Home Page
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Home Page
         </Link>
         <span className="text-3xl font-black tracking-tighter text-white block text-center">
           MITTI<span className="text-[#FFD700]">FIED</span>
@@ -74,37 +74,37 @@ export default function LoginPage() {
           Admin Portal Authentication
         </h2>
       </div>
-
+ 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="glass-panel py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 border border-zinc-800">
           
           <div className="mb-6 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-xs text-amber-400 leading-relaxed flex gap-2">
-            <ShieldAlert className="w-5 h-5 shrink-0" />
+            <ShieldAlert className="w-5 h-5 shrink-0" aria-hidden="true" />
             <div>
               <p className="font-bold">Security Constraint Notice</p>
               <p className="mt-0.5">Only whitelisted Google accounts are authorized for dashboard modifications.</p>
             </div>
           </div>
-
+ 
           {errorMsg && (
             <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-xs text-red-400">
               {errorMsg}
             </div>
           )}
-
+ 
           {successMsg && (
             <div className="mb-4 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-xs text-emerald-400">
               {successMsg}
             </div>
           )}
-
+ 
           <div className="space-y-4">
             <button
               onClick={handleOAuthLogin}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-zinc-800 rounded-lg shadow-sm text-sm font-semibold text-white bg-zinc-900 hover:bg-zinc-850 hover:border-zinc-700 focus:outline-none transition-all disabled:opacity-50"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 14.98 1 12 1 7.35 1 3.37 3.67 1.39 7.56l3.85 2.99c.92-2.76 3.5-4.51 6.76-4.51z"/>
                 <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.4 3.58l3.73 2.89c2.18-2.01 3.7-4.97 3.7-8.62z"/>
                 <path fill="#FBBC05" d="M5.24 14.75c-.24-.72-.38-1.5-.38-2.31s.14-1.59.38-2.31L1.39 7.14C.5 8.93 0 10.91 0 13s.5 4.07 1.39 5.86l3.85-3.11z"/>
