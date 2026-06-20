@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     canonical: "https://mittified.media",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/favicon.jpg",
   },
 };
 

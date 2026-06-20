@@ -76,7 +76,14 @@ export default function Footer() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8 text-left mt-8">
           <div className="md:col-span-2">
-            <span className="text-lg font-black text-white block mb-2">MITTIFIED MEDIA</span>
+            <div className="flex items-center gap-3 mb-3">
+              <img 
+                src="/logo.jpg" 
+                alt="Mittified Logo" 
+                className="w-10 h-10 rounded-full border border-zinc-800 object-cover" 
+              />
+              <span className="text-lg font-black text-white">MITTIFIED MEDIA</span>
+            </div>
             <p className="text-zinc-400 text-xs leading-relaxed max-w-sm font-sans mb-6">
               The premier independent news source tracking the Pakistani YouTube ecosystem. Uncovering drama, tracking statistics, and archiving creators.
             </p>

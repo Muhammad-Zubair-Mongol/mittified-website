@@ -94,7 +94,12 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
       {/* Main Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-3">
+            <img 
+              src="/logo.jpg" 
+              alt="Mittified Logo" 
+              className="w-8 h-8 rounded-full border border-[#FFD700]/30 object-cover" 
+            />
             <span className="text-2xl font-black tracking-tighter text-white">
               MITTI<span className="text-primary text-[#FFD700]">FIED</span>
             </span>
