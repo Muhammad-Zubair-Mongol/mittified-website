@@ -424,3 +424,44 @@ export async function addCreatorFb(creator: Omit<Creator, "id">): Promise<Creato
   }
   return newCreator;
 }
+
+export async function deleteArticleFb(id: string): Promise<boolean> {
+  if (db) {
+    try {
+      const { deleteDoc } = await import("firebase/firestore");
+      const articleDocRef = doc(db, "articles", id);
+      await deleteDoc(articleDocRef);
+      return true;
+    } catch (e) {
+      console.error("Firestore deleteArticle error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const articles = await getArticlesFb();
+    const updated = articles.filter(a => a.id !== id);
+    localStorage.setItem(LOCAL_ARTICLES_KEY, JSON.stringify(updated));
+    return true;
+  }
+  return false;
+}
+
+export async function deleteCreatorFb(id: string): Promise<boolean> {
+  if (db) {
+    try {
+      const { deleteDoc } = await import("firebase/firestore");
+      const creatorDocRef = doc(db, "creators", id);
+      await deleteDoc(creatorDocRef);
+      return true;
+    } catch (e) {
+      console.error("Firestore deleteCreator error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const creators = await getCreatorsFb();
+    const updated = creators.filter(c => c.id !== id);
+    localStorage.setItem(LOCAL_CREATORS_KEY, JSON.stringify(updated));
+    return true;
+  }
+  return false;
+}
+

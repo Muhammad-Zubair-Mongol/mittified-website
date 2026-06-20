@@ -18,6 +18,8 @@ import {
   getNextActiveKeyFb,
   getTickerItemsFb,
   saveTickerItemsFb,
+  deleteArticleFb,
+  deleteCreatorFb,
   NavLink
 } from "./firebase";
 import { Creator, Article } from "./mockData";
@@ -91,4 +93,13 @@ export async function getTickerItems(): Promise<string[]> {
 export async function saveTickerItems(items: string[]): Promise<boolean> {
   return saveTickerItemsFb(items);
 }
+
+export async function deleteArticle(id: string): Promise<boolean> {
+  return deleteArticleFb(id);
+}
+
+export async function deleteCreator(id: string): Promise<boolean> {
+  return deleteCreatorFb(id);
+}
+
 

@@ -16,7 +16,9 @@ import {
   getRotatingKeys,
   saveRotatingKeys,
   getTickerItems,
-  saveTickerItems
+  saveTickerItems,
+  deleteArticle,
+  deleteCreator
 } from "@/lib/supabase";
 import { auth, verifyAdminWhitelist, uploadImage, NavLink } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -208,6 +210,32 @@ export default function AdminPage() {
       alert("Drama alert removed!");
     }
   };
+
+  const handleDeleteArticle = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this publication?")) return;
+    const success = await deleteArticle(id);
+    if (success) {
+      setArticles(prev => prev.filter(art => art.id !== id));
+      alert("Publication deleted successfully!");
+    } else {
+      alert("Failed to delete publication.");
+    }
+  };
+
+  const handleDeleteCreator = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this creator?")) return;
+    const success = await deleteCreator(id);
+    if (success) {
+      setCreators(prev => prev.filter(c => c.id !== id));
+      if (selectedCreatorId === id) {
+        setSelectedCreatorId("");
+      }
+      alert("Creator deleted successfully!");
+    } else {
+      alert("Failed to delete creator.");
+    }
+  };
+
 
   const handleSaveApiKeys = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -605,12 +633,45 @@ export default function AdminPage() {
               </h2>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {articles.map(art => (
-                  <div key={art.id} className="border-b border-zinc-900 pb-2 text-xs">
-                    <span className="text-[10px] text-[#FFD700] font-mono block">{art.category}</span>
-                    <Link href={`/articles/${art.slug}`} className="font-bold text-zinc-300 hover:text-white line-clamp-1 hover:underline">
-                      {art.title}
-                    </Link>
-                    <span className="text-[10px] text-zinc-500 font-mono">{new Date(art.publishedAt).toLocaleDateString()}</span>
+                  <div key={art.id} className="border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] text-[#FFD700] font-mono block">{art.category}</span>
+                      <Link href={`/articles/${art.slug}`} className="font-bold text-zinc-300 hover:text-white line-clamp-1 hover:underline">
+                        {art.title}
+                      </Link>
+                      <span className="text-[10px] text-zinc-500 font-mono">{new Date(art.publishedAt).toLocaleDateString()}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteArticle(art.id)}
+                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-colors"
+                      title="Delete Publication"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* List of registered creators */}
+            <div className="glass-panel p-6 rounded-xl border border-zinc-800">
+              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">
+                👥 Tracked Creators ({creators.length})
+              </h2>
+              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                {creators.map(c => (
+                  <div key={c.id} className="border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-bold text-zinc-300 block truncate">{c.name}</span>
+                      <span className="text-[10px] text-zinc-500 font-mono block truncate">{c.handle}</span>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCreator(c.id)}
+                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-colors"
+                      title="Delete Creator"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
