@@ -4,8 +4,10 @@ service cloud.firestore {
 
     // Helper: checks if the requesting user is authenticated with a whitelisted admin email
     function isWhitelistedAdmin() {
-      return request.auth != null && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+      return request.auth != null && (
+        request.auth.token.email.lower() == "mittifiedbusiness@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
+      );
     }
 
     // Public read-only access for general users. Write access only for admins.
