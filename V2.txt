@@ -1,0 +1,46 @@
+You are an expert full-stack auditor and senior developer. Perform a comprehensive single-pass audit and fix of the entire website (provide the live URL if not already shared). Focus on functionality, automation, content completeness, SEO readiness, and legal/compliance gaps. Structure your response with clear sections, bullet points, and actionable tasks so nothing is wasted. Do not give vague answers—be specific, technical, and detailed.
+1. Overall Functionality & Headline Section
+
+Verify that every page loads correctly without errors, broken layouts, or console errors.
+Specifically audit the headline / hero section: Is it dynamically controlled? Can different headlines/creators be swapped easily? How are multiple sets of creators handled (e.g., different categories, featured vs. all, Urdu-specific vs. others)? Provide the exact mechanism (CMS field, database query, component props, etc.) and suggest improvements if it's not flexible or scalable.
+Confirm navigation, mobile responsiveness, and core user flows (home → creator pages → other sections) work perfectly.
+
+2. Core Content & Database
+
+Home page: Confirm all sections (featured creators, latest content, categories, etc.) pull correctly and display as intended.
+Creator database: Is it fully populated, searchable, filterable, and updatable? How are new creators added? Are images, bios, links, and categories properly managed? Check for any missing or duplicate entries.
+Verify that all dynamic content (creators, posts, categories) renders correctly and efficiently.
+
+3. Automation & Feeds
+
+RSS Feed: Confirm it exists, is accessible (standard /feed or /rss path), and automatically updates whenever new content is published. Test by adding a test item if needed and verify.
+Sitemap: Confirm sitemap.xml exists, is submitted to Google Search Console if possible, and automatically updates with new pages/creators/posts. Check frequency and completeness.
+ads.txt: Confirm it exists at the root (/ads.txt) and automatically stays updated if you use any ad networks. If missing or static, make it dynamic or properly maintained.
+
+4. Legal Pages (Critical)
+
+Privacy Policy: This page currently does not exist. Create a complete, professional Privacy Policy page tailored to the site (include data collection, cookies, analytics, user content, etc.). Make it accessible from footer and easily editable.
+Terms of Use / Terms & Conditions: Create this page as well, covering user responsibilities, content ownership, disclaimers, etc. Link it properly in the footer.
+
+5. Social Media Integration
+Add all social media links with proper icons (use correct SVGs or inline SVGs for performance) in the footer, header (if appropriate), and any contact/about sections. Ensure they open in new tabs.
+Links to add:
+
+Instagram: https://www.instagram.com/mittified/
+YouTube: https://www.youtube.com/mittified786
+Threads: https://www.threads.com/@mittified
+TikTok: https://www.tiktok.com/@mittifiedurdu
+Facebook: https://www.facebook.com/profile.php?id=61574705407237
+Use official/recognizable SVG icons for each platform.
+Make sure hover effects and accessibility (aria-labels) are implemented.
+Verify links are correct and functional.
+
+6. Final Checks & Deliverables
+
+Run full lighthouse/SEO audit (performance, accessibility, best practices, SEO).
+List any broken links, missing meta tags, Open Graph images, or schema markup issues.
+Provide a prioritized list of fixes/improvements with code snippets where relevant.
+After fixes, confirm everything is working end-to-end and automation is reliable.
+
+Work efficiently: group related tasks, test thoroughly, and deliver clean, production-ready changes. Flag anything that requires my input. Once complete, summarize what was verified/fixed and any remaining recommendations.
+Start now and provide the full audit report.

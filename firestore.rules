@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: checks if the requesting user is authenticated with a whitelisted admin email
+    function isWhitelistedAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+
+    // Public read-only access for general users. Write access only for admins.
+    match /creators/{creatorId} {
+      allow read: if true;
+      allow write: if isWhitelistedAdmin();
+    }
+
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if isWhitelistedAdmin();
+    }
+
+    // Whitelist rules: Only whitelisted admins can read or manage the admins registry list
+    match /admins/{emailId} {
+      allow read: if request.auth != null;
+      allow write: if isWhitelistedAdmin();
+    }
+  }
+}

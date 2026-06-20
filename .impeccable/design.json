@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-20T18:17:00Z",
+  "title": "Design System: Mittified Media",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Supercluster Yellow", "canonical": "oklch(85% 0.18 85)", "tonalRamp": ["#332b00", "#665600", "#998100", "#ccac00", "#ffd700", "#ffdf33", "#ffe766", "#fff099"] },
+      "neutral-bg": { "role": "neutral", "displayName": "Deep Void", "canonical": "oklch(12% 0 0)", "tonalRamp": ["#000000", "#050506", "#09090b", "#141419", "#1f1f26", "#2c2c35", "#3a3a46", "#494958"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines only." },
+      "body": { "displayName": "Body", "purpose": "Prose content." }
+    },
+    "shadows": [
+      { "name": "ambient-low", "value": "0 4px 24px rgba(0,0,0,0.12)", "purpose": "Default resting shadow." },
+      { "name": "glow-accent", "value": "0 10px 25px -5px rgba(255, 215, 0, 0.1)", "purpose": "Active focus/hover state glow." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Smooth transition default." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Call-to-action button styling for navigation and admins.",
+      "html": "<button class=\"ds-btn-primary\">GET STARTED</button>",
+      "css": ".ds-btn-primary { background: #ffd700; color: #09090b; padding: 8px 16px; border-radius: 6px; font-weight: 700; font-family: sans-serif; text-transform: uppercase; font-size: 12px; border: none; cursor: pointer; transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-primary:hover { background-color: #ffe234; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Drama Sandbox",
+    "overview": "The Mittified Media design system is a high-contrast, entertainment-focused interface designed to cover news, stats, and controversies inside the Pakistani YouTube scene.",
+    "keyCharacteristics": [
+      "High-contrast hierarchy: Saturated yellow indicators guide users directly to critical drama shifts.",
+      "Visual stability: Ad placement containers enforce absolute, fixed dimensions to prevent cumulative layout shift.",
+      "Tactile feedback: Hover actions scale cards and glowing accents dynamically to invite user engagement."
+    ],
+    "rules": [
+      { "name": "The 10% Accent Rule", "body": "The primary Supercluster Yellow is used on <=10% of any screen viewport. Its rarity keeps the highlights high-impact.", "section": "colors" }
+    ],
+    "dos": [
+      "Do wrap every AdSense placeholder script in static containers with fixed minimum heights to prevent mobile Cumulative Layout Shift.",
+      "Do use uppercase typography tracking for eyebrow categories to maintain media identity."
+    ],
+    "donts": [
+      "Don't use side-stripe accents greater than 1px on card borders.",
+      "Don't animate image element scale values directly on card hovers; apply scaling strictly to background containers.",
+      "Don't utilize saturated cream or sand colors as the body canvas."
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // Allow public read access to media assets (avatars, article thumbnails)
+      allow read: if true;
+
+      // Allow write access only if user is authenticated and whitelisted in Firestore admins collection
+      allow write: if request.auth != null && 
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.email));
+    }
+  }
+}
