@@ -33,8 +33,8 @@ export default function AdsenseContainer({
       dimensions: "w-[300px] h-[250px] flex items-center justify-center"
     },
     footer: {
-      wrapper: "w-full min-h-[100px] max-h-[120px] rounded-lg overflow-hidden relative border border-zinc-800 bg-zinc-950 flex items-center justify-center my-8",
-      dimensions: "w-full h-full flex items-center justify-center"
+      wrapper: "w-full h-[100px] rounded-lg overflow-hidden relative border border-zinc-800 bg-zinc-950 flex items-center justify-center my-8",
+      dimensions: "w-full h-[100px] flex items-center justify-center"
     }
   };
 

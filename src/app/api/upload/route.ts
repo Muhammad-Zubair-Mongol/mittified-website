@@ -10,8 +10,36 @@ const s3Client = new S3Client({
   },
 });
 
+
+
 export async function POST(req: NextRequest) {
   try {
+    const { adminAuth, adminDb } = await import("@/lib/firebase-admin");
+    // Verify Firebase Admin ID Token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized: Missing token" }, { status: 401 });
+    }
+    const token = authHeader.split("Bearer ")[1];
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (err) {
+      return NextResponse.json({ error: "Unauthorized: Invalid token" }, { status: 401 });
+    }
+
+    if (!decodedToken.email) {
+      return NextResponse.json({ error: "Forbidden: Missing email" }, { status: 403 });
+    }
+
+    const cleanEmail = decodedToken.email.toLowerCase().trim();
+    const isMaster = cleanEmail === "mittifiedbusiness@gmail.com" || cleanEmail === "mittifiedbusiness@gamail.com";
+    const docSnap = await adminDb.collection("admins").doc(cleanEmail).get();
+
+    if (!isMaster && !docSnap.exists) {
+      return NextResponse.json({ error: "Forbidden: Not an authorized admin" }, { status: 403 });
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const folder = formData.get("folder") as string || "covers";

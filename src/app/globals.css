@@ -193,3 +193,10 @@ body {
   border: 0;
 }
 
+/* CSS-based containment for list virtualization performance */
+.virtual-list-item {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px; /* Estimated height for container list items */
+}
+
+

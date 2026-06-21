@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getCreators } from "@/lib/supabase";
+import { getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ArrowLeft, Shield } from "lucide-react";
@@ -38,7 +38,7 @@ export default async function PrivacyPolicyPage() {
 
           <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-6 text-sm md:text-base">
             <p>
-              At <strong>Mittified Media Hub</strong>, accessible from https://mittified.media, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Mittified Media Hub and how we use it.
+              At <strong>Mittified Media Hub</strong>, accessible from https://mittified.studio, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by Mittified Media Hub and how we use it.
             </p>
 
             <h2 className="text-lg font-bold text-white uppercase tracking-wider font-mono mt-8 border-l-2 border-[#FFD700] pl-3">

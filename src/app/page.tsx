@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { getArticles, getCreators } from "@/lib/supabase";
+import Image from "next/image";
+import { getArticles, getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AdsenseContainer from "@/components/AdsenseContainer";
@@ -46,10 +47,13 @@ export default async function Home() {
           {mainFeatured && (
             <div className="lg:col-span-2 flex flex-col justify-between glass-liquid rounded-2xl overflow-hidden shadow-2xl relative group">
               <div className="relative h-96 w-full overflow-hidden">
-                <img 
+                <Image 
                   src={mainFeatured.coverImage} 
                   alt={mainFeatured.title} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
                 <span className="absolute top-4 left-4 bg-red-600 text-white font-mono font-bold text-xs uppercase px-2.5 py-1 rounded">
@@ -76,7 +80,7 @@ export default async function Home() {
                 <div>
                   <Link 
                     href={`/articles/${mainFeatured.slug}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FFD700] uppercase tracking-wider group/link hover:underline"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FFD700] uppercase tracking-wider group/link hover:underline transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
                   >
                     Read Full Investigation <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" aria-hidden="true" />
                   </Link>
@@ -95,7 +99,7 @@ export default async function Home() {
               <Link 
                 href={`/articles/${art.slug}`}
                 key={art.id}
-                className="glass-liquid glass-liquid-interactive p-4 rounded-xl block group"
+                className="glass-liquid glass-liquid-interactive p-4 rounded-xl block group transition-all duration-200 hover:-translate-y-1 active:scale-[0.98] hover:shadow-lg"
               >
                 <span className="text-[10px] text-[#FFD700] font-mono font-bold uppercase block mb-1">
                   {art.category}
@@ -131,9 +135,15 @@ export default async function Home() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {restArticles.map((art) => (
-                <div key={art.id} className="glass-liquid rounded-xl overflow-hidden flex flex-col justify-between">
+                <div key={art.id} className="glass-liquid rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-lg group">
                   <div className="relative h-48 w-full">
-                    <img src={art.coverImage} alt={art.title} className="w-full h-full object-cover" />
+                    <Image 
+                      src={art.coverImage} 
+                      alt={art.title} 
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      className="object-cover" 
+                    />
                   </div>
                   <div className="p-5 flex-1 flex flex-col justify-between bg-zinc-950/20">
                     <div>
@@ -143,7 +153,7 @@ export default async function Home() {
                     </div>
                     <Link 
                       href={`/articles/${art.slug}`}
-                      className="text-xs font-semibold text-[#FFD700] hover:underline flex items-center gap-1"
+                      className="text-xs font-semibold text-[#FFD700] hover:underline flex items-center gap-1 transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
                     >
                       Read full article &rarr;
                     </Link>

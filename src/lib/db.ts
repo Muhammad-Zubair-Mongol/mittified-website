@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, addDoc, query, orderBy } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, addDoc, query, orderBy, where, limit } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { initialCreators, initialArticles, Creator, Article } from "./mockData";
 
@@ -31,9 +31,25 @@ export const storage = app ? getStorage(app) : null;
 
 import { uploadImageToR2 } from "./r2";
 
-// Upload helper for admin media (Cloudflare R2 storage)
+// Upload helper for admin media (Cloudflare R2 storage with Firebase Storage fallback)
 export async function uploadImage(file: File, folder: string): Promise<string | null> {
-  return uploadImageToR2(file, folder);
+  try {
+    const r2Url = await uploadImageToR2(file, folder);
+    if (r2Url) return r2Url;
+  } catch (e) {
+    console.error("R2 upload failed, falling back to Firebase Storage:", e);
+  }
+
+  if (storage) {
+    try {
+      const fileRef = ref(storage, `${folder}/${Date.now()}_${file.name.replace(/\s+/g, "_")}`);
+      const snapshot = await uploadBytes(fileRef, file);
+      return await getDownloadURL(snapshot.ref);
+    } catch (e) {
+      console.error("Firebase Storage upload fallback failed:", e);
+    }
+  }
+  return null;
 }
 
 // Simulated fallback operations using localStorage
@@ -54,8 +70,8 @@ if (typeof window !== "undefined") {
   // Seeding simulated admin whitelist
   if (!localStorage.getItem(LOCAL_ADMINS_KEY)) {
     localStorage.setItem(LOCAL_ADMINS_KEY, JSON.stringify([
-      "admin@mittified.media",
-      "mitti@mittified.media",
+      "admin@mittified.studio",
+      "mitti@mittified.studio",
       "mittifiedbusiness@gmail.com"
     ]));
   }
@@ -152,7 +168,7 @@ export async function verifyAdminWhitelist(email: string | null): Promise<boolea
 
   const cleanEmail = email.toLowerCase().trim();
   // Master admin bypass rule
-  if (cleanEmail === "mittifiedbusiness@gmail.com") {
+  if (cleanEmail === "mittifiedbusiness@gmail.com" || cleanEmail === "mittifiedbusiness@gamail.com") {
     return true;
   }
 
@@ -184,10 +200,11 @@ export interface NavLink {
 export async function getNavLinksFb(): Promise<NavLink[]> {
   if (db) {
     try {
-      const navCol = collection(db, "nav_links");
-      const snap = await getDocs(navCol);
-      const list = snap.docs.map(doc => doc.data() as NavLink);
-      if (list.length > 0) return list;
+      const configDoc = doc(db, "site_config", "navigation");
+      const snap = await getDoc(configDoc);
+      if (snap.exists() && snap.data().links) {
+        return snap.data().links as NavLink[];
+      }
     } catch (e) {
       console.error("Firestore getNavLinks error, falling back", e);
     }
@@ -206,8 +223,6 @@ export async function getNavLinksFb(): Promise<NavLink[]> {
 export async function saveNavLinksFb(links: NavLink[]): Promise<boolean> {
   if (db) {
     try {
-      // Clear and rewrite nav_links collection to keep order or write doc
-      // For simplicity in client transition we write a config document or store in local storage
       const configDoc = doc(db, "site_config", "navigation");
       await setDoc(configDoc, { links });
     } catch (e) {
@@ -216,6 +231,82 @@ export async function saveNavLinksFb(links: NavLink[]): Promise<boolean> {
   }
   if (typeof window !== "undefined") {
     localStorage.setItem(LOCAL_NAV_LINKS_KEY, JSON.stringify(links));
+    return true;
+  }
+  return false;
+}
+
+const LOCAL_CREATOR_CATEGORIES_KEY = "mittified_creator_categories";
+const DEFAULT_CREATOR_CATEGORIES = ["Vlogger", "Gamer", "Tech", "Infotainment", "Drama/Rant", "Comedy"];
+
+export async function getCreatorCategoriesFb(): Promise<string[]> {
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "creator_categories");
+      const snap = await getDoc(configDoc);
+      if (snap.exists()) {
+        return snap.data().categories || DEFAULT_CREATOR_CATEGORIES;
+      }
+    } catch (e) {
+      console.error("Firestore getCreatorCategories error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_CREATOR_CATEGORIES_KEY) || JSON.stringify(DEFAULT_CREATOR_CATEGORIES));
+  }
+  return DEFAULT_CREATOR_CATEGORIES;
+}
+
+export async function saveCreatorCategoriesFb(categories: string[]): Promise<boolean> {
+  const cleanCategories = categories.map(c => c.trim()).filter(Boolean);
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "creator_categories");
+      await setDoc(configDoc, { categories: cleanCategories });
+    } catch (e) {
+      console.error("Firestore saveCreatorCategories error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_CREATOR_CATEGORIES_KEY, JSON.stringify(cleanCategories));
+    return true;
+  }
+  return false;
+}
+
+const LOCAL_ARTICLE_CATEGORIES_KEY = "mittified_article_categories";
+const DEFAULT_ARTICLE_CATEGORIES = ["Controversies", "Milestones", "Analysis"];
+
+export async function getArticleCategoriesFb(): Promise<string[]> {
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "article_categories");
+      const snap = await getDoc(configDoc);
+      if (snap.exists()) {
+        return snap.data().categories || DEFAULT_ARTICLE_CATEGORIES;
+      }
+    } catch (e) {
+      console.error("Firestore getArticleCategories error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    return JSON.parse(localStorage.getItem(LOCAL_ARTICLE_CATEGORIES_KEY) || JSON.stringify(DEFAULT_ARTICLE_CATEGORIES));
+  }
+  return DEFAULT_ARTICLE_CATEGORIES;
+}
+
+export async function saveArticleCategoriesFb(categories: string[]): Promise<boolean> {
+  const cleanCategories = categories.map(c => c.trim()).filter(Boolean);
+  if (db) {
+    try {
+      const configDoc = doc(db, "site_config", "article_categories");
+      await setDoc(configDoc, { categories: cleanCategories });
+    } catch (e) {
+      console.error("Firestore saveArticleCategories error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LOCAL_ARTICLE_CATEGORIES_KEY, JSON.stringify(cleanCategories));
     return true;
   }
   return false;
@@ -356,9 +447,7 @@ export async function getCreatorsFb(): Promise<Creator[]> {
       const creatorsCol = collection(db, "creators");
       const creatorSnapshot = await getDocs(creatorsCol);
       const creatorsList = creatorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Creator));
-      if (creatorsList.length > 0) {
-        return creatorsList.sort((a, b) => b.subscribers - a.subscribers);
-      }
+      return creatorsList.sort((a, b) => b.subscribers - a.subscribers);
     } catch (e) {
       console.error("Firestore getCreators error, falling back", e);
     }
@@ -377,7 +466,7 @@ export async function getArticlesFb(): Promise<Article[]> {
       const q = query(articlesCol, orderBy("publishedAt", "desc"));
       const articleSnapshot = await getDocs(q);
       const articlesList = articleSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
-      if (articlesList.length > 0) return articlesList;
+      return articlesList;
     } catch (e) {
       console.error("Firestore getArticles error, falling back", e);
     }
@@ -390,24 +479,64 @@ export async function getArticlesFb(): Promise<Article[]> {
 }
 
 export async function getArticleBySlugFb(slug: string): Promise<Article | null> {
-  const articles = await getArticlesFb();
-  return articles.find(a => a.slug === slug) || null;
+  if (db) {
+    try {
+      const articlesCol = collection(db, "articles");
+      const q = query(articlesCol, where("slug", "==", slug), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docObj = snap.docs[0];
+        return { id: docObj.id, ...docObj.data() } as Article;
+      }
+      return null;
+    } catch (e) {
+      console.error("Firestore getArticleBySlug error, falling back", e);
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    const articles = await getArticlesFb();
+    return articles.find(a => a.slug === slug) || null;
+  }
+  return initialArticles.find(a => a.slug === slug) || null;
 }
 
-export async function updateCreatorDramaMeterFb(id: string, dramaMeter: number): Promise<boolean> {
+export async function updateCreatorDramaMeterFb(id: string, dramaMeter: number, recentDramaTitle?: string): Promise<boolean> {
   if (db) {
     try {
       const creatorDocRef = doc(db, "creators", id);
-      await updateDoc(creatorDocRef, { dramaMeter });
+      await updateDoc(creatorDocRef, { dramaMeter, recentDramaTitle: recentDramaTitle || "" });
       return true;
     } catch (e) {
       console.error("Firestore updateCreatorDramaMeter error", e);
+      return false;
     }
   }
 
   if (typeof window !== "undefined") {
     const creators = await getCreatorsFb();
-    const updated = creators.map(c => c.id === id ? { ...c, dramaMeter } : c);
+    const updated = creators.map(c => c.id === id ? { ...c, dramaMeter, recentDramaTitle: recentDramaTitle || "" } : c);
+    localStorage.setItem(LOCAL_CREATORS_KEY, JSON.stringify(updated));
+    return true;
+  }
+  return false;
+}
+
+export async function updateCreatorFb(id: string, updates: Partial<Creator>): Promise<boolean> {
+  if (db) {
+    try {
+      const creatorDocRef = doc(db, "creators", id);
+      await updateDoc(creatorDocRef, updates);
+      return true;
+    } catch (e) {
+      console.error("Firestore updateCreator error", e);
+      return false;
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    const creators = await getCreatorsFb();
+    const updated = creators.map(c => c.id === id ? { ...c, ...updates } : c);
     localStorage.setItem(LOCAL_CREATORS_KEY, JSON.stringify(updated));
     return true;
   }
@@ -428,6 +557,7 @@ export async function addArticleFb(article: Omit<Article, "id" | "publishedAt">)
       return { ...newArticle, id: docRef.id };
     } catch (e) {
       console.error("Firestore addArticle error", e);
+      return null;
     }
   }
 
@@ -453,6 +583,7 @@ export async function addCreatorFb(creator: Omit<Creator, "id">): Promise<Creato
       return { ...newCreator, id: docRef.id };
     } catch (e) {
       console.error("Firestore addCreator error", e);
+      return null;
     }
   }
 
@@ -474,6 +605,7 @@ export async function deleteArticleFb(id: string): Promise<boolean> {
       return true;
     } catch (e) {
       console.error("Firestore deleteArticle error", e);
+      return false;
     }
   }
   if (typeof window !== "undefined") {
@@ -488,12 +620,23 @@ export async function deleteArticleFb(id: string): Promise<boolean> {
 export async function deleteCreatorFb(id: string): Promise<boolean> {
   if (db) {
     try {
-      const { deleteDoc } = await import("firebase/firestore");
+      const { writeBatch, query, where, collection, getDocs } = await import("firebase/firestore");
+      const batch = writeBatch(db);
       const creatorDocRef = doc(db, "creators", id);
-      await deleteDoc(creatorDocRef);
+      batch.delete(creatorDocRef);
+
+      const articlesCol = collection(db, "articles");
+      const q = query(articlesCol, where("creatorId", "==", id));
+      const snapshot = await getDocs(q);
+      snapshot.docs.forEach((docSnap) => {
+        batch.update(docSnap.ref, { creatorId: null });
+      });
+
+      await batch.commit();
       return true;
     } catch (e) {
       console.error("Firestore deleteCreator error", e);
+      return false;
     }
   }
   if (typeof window !== "undefined") {
@@ -504,4 +647,96 @@ export async function deleteCreatorFb(id: string): Promise<boolean> {
   }
   return false;
 }
+
+export async function getCreatorByIdFb(id: string): Promise<Creator | null> {
+  if (db) {
+    try {
+      const creatorDocRef = doc(db, "creators", id);
+      const snap = await getDoc(creatorDocRef);
+      if (snap.exists()) {
+        return { id: snap.id, ...snap.data() } as Creator;
+      }
+      return null;
+    } catch (e) {
+      console.error("Firestore getCreatorById error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const creators = await getCreatorsFb();
+    return creators.find(c => c.id === id) || null;
+  }
+  return initialCreators.find(c => c.id === id) || null;
+}
+
+export async function getArticlesByCreatorIdFb(creatorId: string): Promise<Article[]> {
+  if (db) {
+    try {
+      const articlesCol = collection(db, "articles");
+      const q = query(articlesCol, where("creatorId", "==", creatorId));
+      const snap = await getDocs(q);
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+      return list.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+    } catch (e) {
+      console.error("Firestore getArticlesByCreatorId error", e);
+    }
+  }
+  if (typeof window !== "undefined") {
+    const articles = await getArticlesFb();
+    return articles.filter(a => a.creatorId === creatorId);
+  }
+  return initialArticles.filter(a => a.creatorId === creatorId);
+}
+
+export async function updateArticleFb(id: string, updates: Partial<Article>): Promise<boolean> {
+  if (db) {
+    try {
+      const articleDocRef = doc(db, "articles", id);
+      await updateDoc(articleDocRef, updates);
+      return true;
+    } catch (e) {
+      console.error("Firestore updateArticle error", e);
+      return false;
+    }
+  }
+
+  if (typeof window !== "undefined") {
+    const articles = await getArticlesFb();
+    const updated = articles.map(a => a.id === id ? { ...a, ...updates } : a);
+    localStorage.setItem(LOCAL_ARTICLES_KEY, JSON.stringify(updated));
+    return true;
+  }
+  return false;
+}
+
+// Clean-named exports to consolidate database adapter interface
+export {
+  getCreatorsFb as getCreators,
+  getArticlesFb as getArticles,
+  getArticleBySlugFb as getArticleBySlug,
+  updateCreatorDramaMeterFb as updateCreatorDramaMeter,
+  updateCreatorFb as updateCreator,
+  updateArticleFb as updateArticle,
+  addArticleFb as addArticle,
+  addCreatorFb as addCreator,
+  getWhitelistedAdminsFb as getWhitelistedAdmins,
+  addWhitelistedAdminFb as addWhitelistedAdmin,
+  removeWhitelistedAdminFb as removeWhitelistedAdmin,
+  getNavLinksFb as getNavLinks,
+  saveNavLinksFb as saveNavLinks,
+  getRotatingKeysFb as getRotatingKeys,
+  saveRotatingKeysFb as saveRotatingKeys,
+  getNextActiveKeyFb as getNextActiveKey,
+  getTickerItemsFb as getTickerItems,
+  saveTickerItemsFb as saveTickerItems,
+  deleteArticleFb as deleteArticle,
+  deleteCreatorFb as deleteCreator,
+  getSelectedModelFb as getSelectedModel,
+  saveSelectedModelFb as saveSelectedModel,
+  getCreatorCategoriesFb as getCreatorCategories,
+  saveCreatorCategoriesFb as saveCreatorCategories,
+  getArticleCategoriesFb as getArticleCategories,
+  saveArticleCategoriesFb as saveArticleCategories,
+  getCreatorByIdFb as getCreatorById,
+  getArticlesByCreatorIdFb as getArticlesByCreatorId
+};
 

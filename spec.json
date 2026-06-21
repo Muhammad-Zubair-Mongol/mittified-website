@@ -1,0 +1,20 @@
+{
+  "task": "Review the codebase structure, database APIs, admin panel, dynamic routing, and analytics setup. Identify and plan fixes for any dummy/mock data dependencies so that everything is controllable, dynamic, and working as a production-grade media channel. Verify that: 1. The manager can post, edit, or delete articles and YouTubers from the admin panel, and they automatically appear on all pages (homepage, individual pages, search, etc.) without relying on static files or hardcoded objects. 2. Data fetching uses database connections (Firestore/Firebase or Supabase depending on configured environment) and handles fallbacks gracefully. 3. Dynamic navigation link configurations, creator categories, and active API keys are loaded dynamically from the database. 4. RSS feed (/feed.xml/route.ts), sitemaps (/sitemap.ts), and robot rules are fully dynamic. 5. The analytics setup (Google Analytics/Vercel Analytics) is properly integrated to track and analyze page views and key interactions.",
+  "constraints": [
+    "Verify that no client-only mock data is presented as production content.",
+    "Ensure layout visual stability (no CLS from lazy loaded ads or images).",
+    "Keep site fully SEO optimized with dynamic sitemaps and proper metadata schemas.",
+    "Verify Firebase/Firestore initialization and role-based whitelist security checks in src/lib/firebase.ts."
+  ],
+  "repo_context": {
+    "root": "E:/mitti-website",
+    "paths": [
+      "src/lib/firebase.ts",
+      "src/lib/supabase.ts",
+      "src/app/page.tsx",
+      "src/app/admin/page.tsx",
+      "src/app/feed.xml/route.ts",
+      "src/app/sitemap.ts"
+    ]
+  }
+}

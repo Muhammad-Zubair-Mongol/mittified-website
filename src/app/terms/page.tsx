@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { getCreators } from "@/lib/supabase";
+import { getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ArrowLeft, Scale } from "lucide-react";
@@ -38,7 +38,7 @@ export default async function TermsPage() {
 
           <div className="prose prose-invert max-w-none text-zinc-300 leading-relaxed space-y-6 text-sm md:text-base">
             <p>
-              Welcome to <strong>Mittified Media Hub</strong>. These terms and conditions outline the rules and regulations for the use of Mittified Media Hub&apos;s Website, located at https://mittified.media.
+              Welcome to <strong>Mittified Media Hub</strong>. These terms and conditions outline the rules and regulations for the use of Mittified Media Hub&apos;s Website, located at https://mittified.studio.
             </p>
 
             <h2 className="text-lg font-bold text-white uppercase tracking-wider font-mono mt-8 border-l-2 border-[#FFD700] pl-3">

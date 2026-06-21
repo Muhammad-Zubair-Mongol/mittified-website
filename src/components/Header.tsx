@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Flame, ShieldAlert, TrendingUp, Menu, X, PlusCircle, LogOut } from "lucide-react";
-import { auth, verifyAdminWhitelist, getNavLinksFb, getTickerItemsFb, NavLink } from "@/lib/firebase";
+import { auth, verifyAdminWhitelist, getNavLinksFb, getTickerItemsFb, NavLink } from "@/lib/db";
 import { signOut } from "firebase/auth";
 
 const YoutubeIcon = ({ className }: { className?: string }) => (

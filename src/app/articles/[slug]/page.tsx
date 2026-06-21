@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getArticles, getCreators } from "@/lib/supabase";
+import { getArticles, getCreators, getArticleBySlug, getCreatorById } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AdsenseContainer from "@/components/AdsenseContainer";
@@ -29,15 +29,14 @@ export async function generateStaticParams() {
 
 export default async function ArticleDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const articles = await getArticles();
-  const article = articles.find(a => a.slug === slug);
+  const article = await getArticleBySlug(slug);
 
   if (!article) {
     notFound();
   }
 
+  const creator = article.creatorId ? await getCreatorById(article.creatorId) : null;
   const creators = await getCreators();
-  const creator = creators.find(c => c.id === article.creatorId);
 
   const totalSubscribers = creators.reduce((acc, c) => acc + c.subscribers, 0);
   const exposedCount = creators.filter(c => c.status === "Drama/Exposed").length;

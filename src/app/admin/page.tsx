@@ -5,9 +5,6 @@ import { useRouter } from "next/navigation";
 import { 
   getCreators, 
   getArticles, 
-  addArticle, 
-  updateCreatorDramaMeter, 
-  addCreator,
   getWhitelistedAdmins,
   addWhitelistedAdmin,
   removeWhitelistedAdmin,
@@ -19,15 +16,24 @@ import {
   saveTickerItems,
   deleteArticle,
   deleteCreator,
-  getNextActiveKey,
   getSelectedModel,
-  saveSelectedModel
-} from "@/lib/supabase";
-import { auth, verifyAdminWhitelist, uploadImage, NavLink } from "@/lib/firebase";
+  saveSelectedModel,
+  getCreatorCategories,
+  saveCreatorCategories,
+  getArticleCategories,
+  saveArticleCategories,
+  auth,
+  verifyAdminWhitelist,
+  NavLink
+} from "@/lib/db";
 import { signOut } from "firebase/auth";
 import { Creator, Article } from "@/lib/mockData";
-import { ShieldCheck, PlusCircle, LayoutDashboard, Film, FileText, Send, LogOut, Key, Link2, Trash2, Flame } from "lucide-react";
+import { ShieldCheck, LogOut, Key, Link2, Trash2, Flame } from "lucide-react";
 import Link from "next/link";
+import ArticlePublisher from "@/components/admin/ArticlePublisher";
+import AddCreatorForm from "@/components/admin/AddCreatorForm";
+import CreatorEditor from "@/components/admin/CreatorEditor";
+import ArticleEditor from "@/components/admin/ArticleEditor";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -40,57 +46,22 @@ export default function AdminPage() {
 
   // Whitelist admin states
   const [whitelistEmails, setWhitelistEmails] = useState<string[]>([]);
-  const [newWhitelistEmail, setNewWhitelistEmail] = useState("");
 
   // Navigation link states
   const [navLinksList, setNavLinksList] = useState<NavLink[]>([]);
-  const [newNavLinkLabel, setNewNavLinkLabel] = useState("");
-  const [newNavLinkHref, setNewNavLinkHref] = useState("");
 
   // Rotating keys states
   const [apiKeysInput, setApiKeysInput] = useState("");
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // Live Drama Tracker ticker items states
   const [tickerItemsList, setTickerItemsList] = useState<string[]>([]);
-  const [newTickerItem, setNewTickerItem] = useState("");
 
-  // Update states
-  const [selectedCreatorId, setSelectedCreatorId] = useState("");
-  const [newDramaMeter, setNewDramaMeter] = useState(50);
-  const [newDramaTitle, setNewDramaTitle] = useState("");
+  // Dynamic creator categories state
+  const [creatorCategories, setCreatorCategories] = useState<string[]>([]);
 
-  // Create article form states
-  const [artTitle, setArtTitle] = useState("");
-  const [artSlug, setArtSlug] = useState("");
-  const [artSummary, setArtSummary] = useState("");
-  const [artContent, setArtContent] = useState("");
-  const [artCover, setArtCover] = useState("");
-  const [artCategory, setArtCategory] = useState("Controversies");
-  const [artTags, setArtTags] = useState("");
-  const [artVideoId, setArtVideoId] = useState("");
-  const [uploading, setUploading] = useState(false);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, folder: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    const url = await uploadImage(file, folder);
-    if (url) {
-      setArtCover(url);
-    } else {
-      alert("Image upload failed.");
-    }
-    setUploading(false);
-  };
-
-  // Create creator states
-  const [creatorName, setCreatorName] = useState("");
-  const [creatorHandle, setCreatorHandle] = useState("");
-  const [creatorSubs, setCreatorSubs] = useState(1000000);
-  const [creatorCategory, setCreatorCategory] = useState<Creator["category"]>("Vlogger");
+  // Dynamic article categories state
+  const [articleCategories, setArticleCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (auth) {
@@ -151,80 +122,99 @@ export default function AdminPage() {
 
     const model = await getSelectedModel();
     setSelectedModel(model);
+
+    const cats = await getCreatorCategories();
+    setCreatorCategories(cats);
+
+    const aCats = await getArticleCategories();
+    setArticleCategories(aCats);
   }
 
-  const handleAddWhitelistEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWhitelistEmail.trim()) return;
-    const success = await addWhitelistedAdmin(newWhitelistEmail);
+  const handleSaveCreatorCategories = async (updated: string[]) => {
+    const success = await saveCreatorCategories(updated);
     if (success) {
-      setWhitelistEmails(prev => [...prev, newWhitelistEmail.toLowerCase().trim()]);
-      setNewWhitelistEmail("");
-      alert("Admin email whitelisted successfully!");
+      setCreatorCategories(updated);
+      return true;
     }
+    return false;
+  };
+
+  const handleSaveArticleCategories = async (updated: string[]) => {
+    const success = await saveArticleCategories(updated);
+    if (success) {
+      setArticleCategories(updated);
+      return true;
+    }
+    return false;
+  };
+
+  const handleAddWhitelistEmail = async (email: string) => {
+    if (!email.trim()) return false;
+    const success = await addWhitelistedAdmin(email);
+    if (success) {
+      setWhitelistEmails(prev => [...prev, email.toLowerCase().trim()]);
+      alert("Admin email whitelisted successfully!");
+      return true;
+    }
+    return false;
   };
 
   const handleRemoveWhitelistEmail = async (email: string) => {
     if (email.toLowerCase() === "mittifiedbusiness@gmail.com") {
       alert("Cannot remove the master bypass administrator email.");
-      return;
+      return false;
     }
     const success = await removeWhitelistedAdmin(email);
     if (success) {
       setWhitelistEmails(prev => prev.filter(e => e !== email));
       alert("Admin email removed from whitelist.");
+      return true;
     }
+    return false;
   };
 
-  const handleAddNavLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNavLinkLabel.trim() || !newNavLinkHref.trim()) return;
-    const updated = [...navLinksList, { label: newNavLinkLabel, href: newNavLinkHref }];
+  const handleSaveNavLinksList = async (updated: NavLink[]) => {
     const success = await saveNavLinks(updated);
     if (success) {
       setNavLinksList(updated);
-      setNewNavLinkLabel("");
-      setNewNavLinkHref("");
-      alert("Navigation link added!");
+      return true;
     }
+    return false;
   };
 
-  const handleRemoveNavLink = async (index: number) => {
-    const updated = navLinksList.filter((_, i) => i !== index);
-    const success = await saveNavLinks(updated);
-    if (success) {
-      setNavLinksList(updated);
-      alert("Navigation link removed!");
-    }
-  };
-
-  const handleAddTickerItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTickerItem.trim()) return;
-    const updated = [...tickerItemsList, newTickerItem.trim()];
+  const handleSaveTickerItemsList = async (updated: string[]) => {
     const success = await saveTickerItems(updated);
     if (success) {
       setTickerItemsList(updated);
-      setNewTickerItem("");
-      alert("Drama alert added to ticker!");
+      return true;
     }
+    return false;
   };
 
-  const handleRemoveTickerItem = async (index: number) => {
-    const updated = tickerItemsList.filter((_, i) => i !== index);
-    const success = await saveTickerItems(updated);
-    if (success) {
-      setTickerItemsList(updated);
-      alert("Drama alert removed!");
+  const triggerRevalidation = async (additionalPaths: string[] = []) => {
+    try {
+      await fetch("/api/revalidate?path=/");
+      await fetch("/api/revalidate?path=/creators");
+      await fetch("/api/revalidate?path=/feed.xml");
+      await fetch("/api/revalidate?path=/llms.txt");
+      for (const path of additionalPaths) {
+        await fetch(`/api/revalidate?path=${path}`);
+      }
+    } catch (e) {
+      console.error("Revalidation failed:", e);
     }
   };
 
   const handleDeleteArticle = async (id: string) => {
     if (!confirm("Are you sure you want to delete this publication?")) return;
+    const art = articles.find(a => a.id === id);
     const success = await deleteArticle(id);
     if (success) {
       setArticles(prev => prev.filter(art => art.id !== id));
       alert("Publication deleted successfully!");
+      const paths = art ? [`/articles/${art.slug}`] : [];
+      if (art?.creatorId) paths.push(`/creators/${art.creatorId}`);
+      triggerRevalidation(paths);
     } else {
       alert("Failed to delete publication.");
     }
@@ -235,212 +225,52 @@ export default function AdminPage() {
     const success = await deleteCreator(id);
     if (success) {
       setCreators(prev => prev.filter(c => c.id !== id));
-      if (selectedCreatorId === id) {
-        setSelectedCreatorId("");
-      }
       alert("Creator deleted successfully!");
+      const linkedArticles = articles.filter(a => a.creatorId === id);
+      const paths = [`/creators/${id}`];
+      linkedArticles.forEach(a => paths.push(`/articles/${a.slug}`));
+      triggerRevalidation(paths);
     } else {
       alert("Failed to delete creator.");
-    }
-  };
-
-  const handleGenerateContent = async () => {
-    if (!artTitle.trim()) {
-      alert("Please enter an Article Title first to generate content.");
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const activeKey = await getNextActiveKey();
-      if (!activeKey) {
-        alert("No API keys found in the rotation pool. Please paste some API keys below first.");
-        setIsGenerating(false);
-        return;
-      }
-
-      const promptText = `You are an investigative journalist tracking Pakistani YouTube ecosystem drama, metrics, and exposés.
-Generate complete article details based on this title: "${artTitle}".
-You MUST return a valid JSON object only. Do not wrap in markdown code block markers. Just return the raw JSON matching this interface:
-{
-  "summary": "Descriptive meta summary hook (max 150 characters)",
-  "content": "Detailed investigation article content in clean HTML containing multiple paragraphs (<p>), bold tags (<strong>), and headings (<h2>/<h3>) explaining the drama (max 400 words)",
-  "category": "Controversies" | "Milestones" | "Analysis",
-  "tags": ["Tag1", "Tag2", "Tag3"]
-}`;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${activeKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: promptText,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: "application/json",
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`API returned status ${response.status}`);
-      }
-
-      const data = await response.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) {
-        throw new Error("No content generated in the response.");
-      }
-
-      let cleanText = rawText.trim();
-      if (cleanText.startsWith("```json")) {
-        cleanText = cleanText.substring(7);
-      }
-      if (cleanText.endsWith("```")) {
-        cleanText = cleanText.substring(0, cleanText.length - 3);
-      }
-      cleanText = cleanText.trim();
-
-      const parsed = JSON.parse(cleanText);
-      if (parsed.summary) setArtSummary(parsed.summary);
-      if (parsed.content) setArtContent(parsed.content);
-      if (parsed.category) setArtCategory(parsed.category);
-      if (parsed.tags) {
-        if (Array.isArray(parsed.tags)) {
-          setArtTags(parsed.tags.join(", "));
-        } else {
-          setArtTags(parsed.tags);
-        }
-      }
-      
-      setArtSlug(artTitle.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, ""));
-      
-      alert("Content auto-generated successfully using model: " + selectedModel);
-    } catch (e) {
-      console.error("AI Generation Error", e);
-      alert("AI Generation failed: " + (e as Error).message);
-    } finally {
-      setIsGenerating(false);
     }
   };
 
   const handleSaveSelectedModel = async (model: string) => {
     setSelectedModel(model);
     await saveSelectedModel(model);
+    triggerRevalidation();
   };
 
-
-
-  const handleSaveApiKeys = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const keysArray = apiKeysInput.split("\n").map(k => k.trim()).filter(Boolean);
-    const success = await saveRotatingKeys(keysArray);
+  const handleSaveApiKeys = async (keys: string[]) => {
+    const success = await saveRotatingKeys(keys);
     if (success) {
-      alert("Rotating API keys updated successfully!");
+      setApiKeysInput(keys.join("\n"));
+      triggerRevalidation();
+      return true;
     }
+    return false;
   };
 
-  const handleUpdateDrama = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedCreatorId) return;
-
-    await updateCreatorDramaMeter(selectedCreatorId, Number(newDramaMeter));
-    
-    // Update local list
-    setCreators(prev => prev.map(c => {
-      if (c.id === selectedCreatorId) {
-        return { 
-          ...c, 
-          dramaMeter: Number(newDramaMeter), 
-          recentDramaTitle: newDramaTitle || c.recentDramaTitle 
-        };
-      }
-      return c;
-    }));
-
-    alert("Drama meter updated successfully!");
-    setNewDramaTitle("");
+  const handleArticlePublished = (newArt: Article) => {
+    setArticles(prev => [newArt, ...prev]);
+    const paths = [`/articles/${newArt.slug}`];
+    if (newArt.creatorId) paths.push(`/creators/${newArt.creatorId}`);
+    triggerRevalidation(paths);
   };
 
-  const handleAddArticle = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!artTitle || !artSlug || !artContent) {
-      alert("Please fill out Title, Slug, and Content.");
-      return;
-    }
-
-    const tagsArray = artTags.split(",").map(t => t.trim()).filter(Boolean);
-
-    const newArt = await addArticle({
-      title: artTitle,
-      slug: artSlug.toLowerCase().replace(/ /g, "-"),
-      summary: artSummary,
-      content: artContent,
-      coverImage: artCover || "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&q=80&w=600",
-      category: artCategory,
-      tags: tagsArray,
-      author: "Mitti Fied Admin",
-      creatorId: selectedCreatorId || undefined,
-      youtubeVideoId: artVideoId || undefined
-    });
-
-    if (newArt) {
-      setArticles(prev => [newArt, ...prev]);
-      alert("Article posted successfully!");
-      // Reset form
-      setArtTitle("");
-      setArtSlug("");
-      setArtSummary("");
-      setArtContent("");
-      setArtCover("");
-      setArtTags("");
-      setArtVideoId("");
-    }
+  const handleCreatorAdded = (newC: Creator) => {
+    setCreators(prev => [...prev, newC]);
+    triggerRevalidation([`/creators/${newC.id}`]);
   };
 
-  const handleAddCreator = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!creatorName || !creatorHandle) {
-      alert("Name and Handle are required.");
-      return;
-    }
+  const handleCreatorUpdated = (updated: Creator) => {
+    setCreators(prev => prev.map(c => c.id === updated.id ? updated : c));
+    triggerRevalidation([`/creators/${updated.id}`]);
+  };
 
-    const newC = await addCreator({
-      name: creatorName,
-      handle: creatorHandle,
-      channelId: `UC-${Math.random().toString(36).substr(2, 9)}`,
-      avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
-      subscribers: creatorSubs,
-      category: creatorCategory,
-      status: "Active",
-      dramaMeter: 0,
-      metrics: {
-        monthlyViews: 500000,
-        engagementRate: 5.0
-      },
-      bio: `${creatorName} is a tracked channel in the Pakistan YouTube ecosystem.`,
-      socials: {
-        youtube: `https://youtube.com/${creatorHandle}`
-      }
-    });
-
-    if (newC) {
-      setCreators(prev => [...prev, newC]);
-      alert("Creator added successfully!");
-      setCreatorName("");
-      setCreatorHandle("");
-    }
+  const handleArticleUpdated = (updated: Article) => {
+    setArticles(prev => prev.map(a => a.id === updated.id ? updated : a));
+    triggerRevalidation([`/articles/${updated.slug}`]);
   };
 
   const handleLogOut = () => {
@@ -479,7 +309,7 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
           </Link>
           <button 
             onClick={handleLogOut}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-mono transition-all duration-200 hover:-translate-y-0.5 active:scale-95 active:translate-y-0"
           >
             <LogOut className="w-4 h-4" /> Log Out
           </button>
@@ -495,250 +325,36 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
           <div className="lg:col-span-2 space-y-8">
             
             {/* Form: Add Blog Article */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-base font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-6 border-b border-zinc-800 pb-3">
-                <FileText className="text-[#FFD700] w-5 h-5" /> Publish New Investigation
-              </h2>
-              
-              <form onSubmit={handleAddArticle} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">Article Title</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={artTitle} 
-                        onChange={(e) => {
-                          setArtTitle(e.target.value);
-                          setArtSlug(e.target.value.toLowerCase().replace(/ /g, "-").replace(/[^a-z0-9-]/g, ""));
-                        }}
-                        placeholder="e.g. Raza Samo Podcast Fallout Explored"
-                        className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleGenerateContent}
-                        disabled={isGenerating}
-                        className="px-3 py-2 bg-[#FFD700]/10 hover:bg-[#FFD700]/25 text-[#FFD700] border border-[#FFD700]/30 rounded text-xs font-semibold font-mono tracking-wide transition-colors flex items-center gap-1.5 disabled:opacity-50 shrink-0"
-                      >
-                        {isGenerating ? "Generating..." : "✨ Auto-Fill"}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">Slug URL</label>
-                    <input 
-                      type="text" 
-                      value={artSlug} 
-                      onChange={(e) => setArtSlug(e.target.value)}
-                      placeholder="raza-samo-podcast-clash"
-                      className="w-full bg-zinc-900 border border-zinc-850 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Short Summary</label>
-                  <input 
-                    type="text" 
-                    value={artSummary} 
-                    onChange={(e) => setArtSummary(e.target.value)}
-                    placeholder="Provide a quick 2-line hook for search engine previews"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Content (HTML allowed)</label>
-                  <textarea 
-                    value={artContent} 
-                    onChange={(e) => setArtContent(e.target.value)}
-                    rows={8}
-                    placeholder="<p>Detailed expos&eacute; text goes here...</p>"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none font-mono"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">
-                      Cover Image {uploading ? "(Uploading...)" : "(URL or Upload)"}
-                    </label>
-                    <input 
-                      type="text" 
-                      value={artCover} 
-                      onChange={(e) => setArtCover(e.target.value)}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none mb-1.5"
-                    />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, "covers")}
-                      className="text-[10px] text-zinc-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-semibold file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-750 cursor-pointer block w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">Category</label>
-                    <select
-                      value={artCategory}
-                      onChange={(e) => setArtCategory(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-300 focus:border-[#FFD700] outline-none"
-                    >
-                      <option value="Controversies">Controversies</option>
-                      <option value="Milestones">Milestones</option>
-                      <option value="Analysis">Analysis</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">Tags (comma separated)</label>
-                    <input 
-                      type="text" 
-                      value={artTags} 
-                      onChange={(e) => setArtTags(e.target.value)}
-                      placeholder="Ducky Bhai, Roast, Vlog"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">YouTube Video ID (Optional embed)</label>
-                    <input 
-                      type="text" 
-                      value={artVideoId} 
-                      onChange={(e) => setArtVideoId(e.target.value)}
-                      placeholder="dQw4w9WgXcQ"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-600 focus:border-[#FFD700] outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-zinc-400 font-mono block mb-1">Link to Creator (Optional)</label>
-                    <select
-                      value={selectedCreatorId}
-                      onChange={(e) => setSelectedCreatorId(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-300 focus:border-[#FFD700] outline-none"
-                    >
-                      <option value="">Select linked creator...</option>
-                      {creators.map(c => (
-                        <option key={c.id} value={c.id}>{c.name} ({c.handle})</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-extrabold text-sm py-3 rounded-lg flex items-center justify-center gap-2 transition-all mt-4"
-                >
-                  <Send className="w-4 h-4" /> Publish Article & Sync Edges
-                </button>
-              </form>
-            </div>
+            <ArticlePublisher 
+              creators={creators} 
+              selectedModel={selectedModel} 
+              categories={articleCategories}
+              onArticlePublished={handleArticlePublished} 
+            />
 
             {/* Form: Add Creator */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-base font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-6 border-b border-zinc-800 pb-3">
-                <Film className="text-[#FFD700] w-5 h-5" /> Add Creator to Database
-              </h2>
-              <form onSubmit={handleAddCreator} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                <div className="md:col-span-2">
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Creator Name</label>
-                  <input 
-                    type="text" 
-                    value={creatorName} 
-                    onChange={(e) => setCreatorName(e.target.value)}
-                    placeholder="e.g. Sham Idrees"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white focus:border-[#FFD700] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Handle</label>
-                  <input 
-                    type="text" 
-                    value={creatorHandle} 
-                    onChange={(e) => setCreatorHandle(e.target.value)}
-                    placeholder="@shamvlogs"
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white focus:border-[#FFD700] outline-none"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-sm py-2 px-4 rounded border border-zinc-750 transition-colors"
-                >
-                  Register Creator
-                </button>
-              </form>
-            </div>
+            <AddCreatorForm 
+              categories={creatorCategories}
+              onCreatorAdded={handleCreatorAdded} 
+            />
           </div>
 
           {/* Sidebar controls (Col span 1) */}
           <div className="space-y-6">
             
-            {/* Update Drama Index Gauge */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
-                🔥 Quick Update Drama Heat
-              </h2>
-              <form onSubmit={handleUpdateDrama} className="space-y-4">
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Select YouTuber</label>
-                  <select
-                    value={selectedCreatorId}
-                    onChange={(e) => {
-                      const cid = e.target.value;
-                      setSelectedCreatorId(cid);
-                      const target = creators.find(c => c.id === cid);
-                      if (target) {
-                        setNewDramaMeter(target.dramaMeter);
-                        setNewDramaTitle(target.recentDramaTitle || "");
-                      }
-                    }}
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-350 focus:border-[#FFD700] outline-none"
-                  >
-                    <option value="">Choose creator...</option>
-                    {creators.map(c => (
-                      <option key={c.id} value={c.id}>{c.name} ({c.dramaMeter}%)</option>
-                    ))}
-                  </select>
-                </div>
+            {/* Update Creator Profiles */}
+            <CreatorEditor 
+              creators={creators} 
+              categories={creatorCategories}
+              onCreatorUpdated={handleCreatorUpdated} 
+            />
 
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Drama Heat index ({newDramaMeter}%)</label>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="100" 
-                    value={newDramaMeter} 
-                    onChange={(e) => setNewDramaMeter(Number(e.target.value))}
-                    className="w-full accent-[#FFD700] bg-zinc-900 border border-zinc-800 rounded h-2"
-                  />
-                  <div className="flex justify-between text-[10px] text-zinc-500 font-mono mt-1">
-                    <span>Safe (0)</span>
-                    <span>Extreme (100)</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-zinc-400 font-mono block mb-1">Update Alert Tagline</label>
-                  <input 
-                    type="text" 
-                    value={newDramaTitle} 
-                    onChange={(e) => setNewDramaTitle(e.target.value)}
-                    placeholder="Leave comment or update message..."
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-sm text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!selectedCreatorId}
-                  className="w-full bg-[#FFD700]/10 border border-[#FFD700]/30 hover:bg-[#FFD700]/20 text-[#FFD700] font-semibold text-xs py-2.5 rounded transition-all disabled:opacity-50"
-                >
-                  Apply Live Update
-                </button>
-              </form>
-            </div>
+            {/* Update Article Profiles */}
+            <ArticleEditor 
+              articles={articles}
+              categories={articleCategories}
+              onArticleUpdated={handleArticleUpdated}
+            />
 
             {/* List of articles currently published */}
             <div className="glass-panel p-6 rounded-xl border border-zinc-800">
@@ -747,7 +363,7 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
               </h2>
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {articles.map(art => (
-                  <div key={art.id} className="border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                  <div key={art.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <span className="text-[10px] text-[#FFD700] font-mono block">{art.category}</span>
                       <Link href={`/articles/${art.slug}`} className="font-bold text-zinc-300 hover:text-white line-clamp-1 hover:underline">
@@ -757,7 +373,7 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
                     </div>
                     <button
                       onClick={() => handleDeleteArticle(art.id)}
-                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-colors"
+                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
                       title="Delete Publication"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -774,14 +390,14 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
               </h2>
               <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                 {creators.map(c => (
-                  <div key={c.id} className="border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                  <div key={c.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <span className="font-bold text-zinc-300 block truncate">{c.name}</span>
                       <span className="text-[10px] text-zinc-500 font-mono block truncate">{c.handle}</span>
                     </div>
                     <button
                       onClick={() => handleDeleteCreator(c.id)}
-                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-colors"
+                      className="text-red-500 hover:text-red-450 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
                       title="Delete Creator"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -792,175 +408,43 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
             </div>
 
             {/* Whitelisted Admins List & CRUD */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
-                🛡️ Whitelisted Admins ({whitelistEmails.length})
-              </h2>
-              <form onSubmit={handleAddWhitelistEmail} className="flex gap-2 mb-4">
-                <input 
-                  type="email" 
-                  value={newWhitelistEmail} 
-                  onChange={(e) => setNewWhitelistEmail(e.target.value)}
-                  placeholder="admin@domain.com"
-                  className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
-                />
-                <button
-                  type="submit"
-                  className="bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-bold text-xs px-3 py-1.5 rounded transition-colors"
-                >
-                  Whitelist
-                </button>
-              </form>
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {whitelistEmails.map((email) => (
-                  <div key={email} className="flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
-                    <span className="truncate max-w-[180px] text-zinc-350">{email}</span>
-                    {email !== "mittifiedbusiness@gmail.com" && (
-                      <button
-                        onClick={() => handleRemoveWhitelistEmail(email)}
-                        className="text-red-500 hover:text-red-400 p-1"
-                        title="Remove Whitelist"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <WhitelistedAdmins 
+              whitelistEmails={whitelistEmails} 
+              onAddEmail={handleAddWhitelistEmail} 
+              onRemoveEmail={handleRemoveWhitelistEmail} 
+            />
+
+            {/* Creator Categories List & CRUD */}
+            <ManageCreatorCategories 
+              categories={creatorCategories}
+              onSaveCategories={handleSaveCreatorCategories}
+            />
+
+            {/* Article Categories List & CRUD */}
+            <ManageArticleCategories 
+              categories={articleCategories}
+              onSaveCategories={handleSaveArticleCategories}
+            />
 
             {/* Dynamic Navigation Links CRUD */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
-                <Link2 className="text-[#FFD700] w-4 h-4" /> Header Links CRUD
-              </h2>
-              <form onSubmit={handleAddNavLink} className="space-y-2.5 mb-4">
-                <input 
-                  type="text" 
-                  value={newNavLinkLabel} 
-                  onChange={(e) => setNewNavLinkLabel(e.target.value)}
-                  placeholder="Link Label (e.g., Blog)"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
-                />
-                <input 
-                  type="text" 
-                  value={newNavLinkHref} 
-                  onChange={(e) => setNewNavLinkHref(e.target.value)}
-                  placeholder="Href Target (e.g., /#blog)"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-colors"
-                >
-                  Create Navigation Link
-                </button>
-              </form>
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {navLinksList.map((link, index) => (
-                  <div key={link.label + index} className="flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
-                    <div>
-                      <span className="font-bold text-zinc-300">{link.label}</span>
-                      <span className="text-[10px] text-zinc-500 block">{link.href}</span>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveNavLink(index)}
-                      className="text-red-500 hover:text-red-400 p-1"
-                      title="Remove Link"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HeaderLinksCrud 
+              navLinksList={navLinksList} 
+              onSaveLinks={handleSaveNavLinksList} 
+            />
 
             {/* Live Drama Tracker Ticker CRUD */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
-                <Flame className="text-[#FFD700] w-4 h-4 text-rose-500 animate-pulse" /> Live Drama Tracker CRUD
-              </h2>
-              <form onSubmit={handleAddTickerItem} className="space-y-2.5 mb-4">
-                <input 
-                  type="text" 
-                  value={newTickerItem} 
-                  onChange={(e) => setNewTickerItem(e.target.value)}
-                  placeholder="Ticker Item Text (e.g., URGENT: Ducky Bhai...)"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-colors"
-                >
-                  Add Ticker Alert
-                </button>
-              </form>
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {tickerItemsList.map((item, index) => (
-                  <div key={item + index} className="flex items-start justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
-                    <span className="text-zinc-300 leading-normal pr-2">{item}</span>
-                    <button
-                      onClick={() => handleRemoveTickerItem(index)}
-                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0"
-                      title="Remove Ticker Alert"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <LiveDramaTrackerTicker 
+              tickerItemsList={tickerItemsList} 
+              onSaveItems={handleSaveTickerItemsList} 
+            />
 
             {/* Rotating API Keys Setup */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
-                <Key className="text-[#FFD700] w-4 h-4" /> Rotating API Keys Pool
-              </h2>
-              <p className="text-[10px] text-zinc-500 font-sans leading-relaxed mb-3">
-                Paste bulk API keys (one key per line) to automatically cycle and avoid single-key quota blocks.
-              </p>
-
-              {/* Customizable Gemini Model Selector */}
-              <div className="mb-4">
-                <label className="text-[10px] text-zinc-400 font-mono block mb-1">Gemini Model for AI Generation</label>
-                <input
-                  type="text"
-                  value={selectedModel}
-                  onChange={(e) => handleSaveSelectedModel(e.target.value)}
-                  placeholder="e.g. gemini-2.5-flash"
-                  list="gemini-models"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:border-[#FFD700] outline-none"
-                />
-                <datalist id="gemini-models">
-                  <option value="gemini-2.5-flash" />
-                  <option value="gemini-2.5-pro" />
-                  <option value="gemini-1.5-flash" />
-                  <option value="gemini-1.5-pro" />
-                </datalist>
-                <p className="text-[9px] text-zinc-550 font-mono mt-1">
-                  Type any custom/future model name (e.g., custom fine-tuned models).
-                </p>
-              </div>
-
-              <form onSubmit={handleSaveApiKeys} className="space-y-3">
-                <div>
-                  <label className="text-[10px] text-zinc-400 font-mono block mb-1">API Key Pool</label>
-                  <textarea
-                    value={apiKeysInput}
-                    onChange={(e) => setApiKeysInput(e.target.value)}
-                    rows={4}
-                    placeholder="AIzaSy...&#10;AIzaSy..."
-                    className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none font-mono"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-[#FFD700]/10 border border-[#FFD700]/30 hover:bg-[#FFD700]/20 text-[#FFD700] font-semibold text-xs py-2.5 rounded transition-all"
-                >
-                  Save & Update Rotation Pool
-                </button>
-              </form>
-            </div>
+            <RotatingApiKeys 
+              initialKeys={apiKeysInput} 
+              selectedModel={selectedModel} 
+              onSaveKeys={handleSaveApiKeys} 
+              onModelChange={handleSaveSelectedModel} 
+            />
 
           </div>
 
@@ -970,3 +454,436 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
     </div>
   );
 }
+
+interface WhitelistedAdminsProps {
+  whitelistEmails: string[];
+  onAddEmail: (email: string) => Promise<boolean>;
+  onRemoveEmail: (email: string) => Promise<boolean>;
+}
+
+function WhitelistedAdmins({ whitelistEmails, onAddEmail, onRemoveEmail }: WhitelistedAdminsProps) {
+  const [newWhitelistEmail, setNewWhitelistEmail] = useState("");
+
+  const handleAddWhitelistEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWhitelistEmail.trim()) return;
+    const success = await onAddEmail(newWhitelistEmail);
+    if (success) {
+      setNewWhitelistEmail("");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+        🛡️ Whitelisted Admins ({whitelistEmails.length})
+      </h2>
+      <form onSubmit={handleAddWhitelistEmailSubmit} className="flex gap-2 mb-4">
+        <label htmlFor="whitelist-email-input" className="sr-only">Admin email to whitelist</label>
+        <input 
+          id="whitelist-email-input"
+          type="email" 
+          value={newWhitelistEmail} 
+          onChange={(e) => setNewWhitelistEmail(e.target.value)}
+          placeholder="admin@domain.com"
+          className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <button
+          type="submit"
+          className="bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-bold text-xs px-3 py-1.5 rounded transition-all duration-200 hover:-translate-y-0.5 active:scale-95 active:translate-y-0"
+        >
+          Whitelist
+        </button>
+      </form>
+      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+        {whitelistEmails.map((email) => (
+          <div key={email} className="virtual-list-item flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+            <span className="truncate max-w-[180px] text-zinc-350">{email}</span>
+            {email !== "mittifiedbusiness@gmail.com" && (
+              <button
+                onClick={() => onRemoveEmail(email)}
+                className="text-red-500 hover:text-red-450 p-1 transition-all duration-200 hover:scale-115 active:scale-90"
+                title="Remove Whitelist"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface HeaderLinksCrudProps {
+  navLinksList: NavLink[];
+  onSaveLinks: (links: NavLink[]) => Promise<boolean>;
+}
+
+function HeaderLinksCrud({ navLinksList, onSaveLinks }: HeaderLinksCrudProps) {
+  const [newNavLinkLabel, setNewNavLinkLabel] = useState("");
+  const [newNavLinkHref, setNewNavLinkHref] = useState("");
+
+  const handleAddNavLinkSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNavLinkLabel.trim() || !newNavLinkHref.trim()) return;
+    const updated = [...navLinksList, { label: newNavLinkLabel, href: newNavLinkHref }];
+    const success = await onSaveLinks(updated);
+    if (success) {
+      setNewNavLinkLabel("");
+      setNewNavLinkHref("");
+      alert("Navigation link added!");
+    }
+  };
+
+  const handleRemoveNavLink = async (index: number) => {
+    const updated = navLinksList.filter((_, i) => i !== index);
+    const success = await onSaveLinks(updated);
+    if (success) {
+      alert("Navigation link removed!");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+        <Link2 className="text-[#FFD700] w-4 h-4" /> Header Links CRUD
+      </h2>
+      <form onSubmit={handleAddNavLinkSubmit} className="space-y-2.5 mb-4">
+        <label htmlFor="nav-link-label" className="sr-only">Link Label</label>
+        <input 
+          id="nav-link-label"
+          type="text" 
+          value={newNavLinkLabel} 
+          onChange={(e) => setNewNavLinkLabel(e.target.value)}
+          placeholder="Link Label (e.g., Blog)"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <label htmlFor="nav-link-href" className="sr-only">Link Href</label>
+        <input 
+          id="nav-link-href"
+          type="text" 
+          value={newNavLinkHref} 
+          onChange={(e) => setNewNavLinkHref(e.target.value)}
+          placeholder="Href Target (e.g., /#blog)"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <button
+          type="submit"
+          className="w-full bg-zinc-800 hover:bg-zinc-750 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-all duration-200 hover:-translate-y-0.5 active:scale-98 active:translate-y-0"
+        >
+          Create Navigation Link
+        </button>
+      </form>
+      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+        {navLinksList.map((link, index) => (
+          <div key={link.label + index} className="virtual-list-item flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+            <div>
+              <span className="font-bold text-zinc-300">{link.label}</span>
+              <span className="text-[10px] text-zinc-500 block">{link.href}</span>
+            </div>
+            <button
+              onClick={() => handleRemoveNavLink(index)}
+              className="text-red-500 hover:text-red-450 p-1 transition-all duration-200 hover:scale-115 active:scale-90"
+              title="Remove Link"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface LiveDramaTrackerTickerProps {
+  tickerItemsList: string[];
+  onSaveItems: (items: string[]) => Promise<boolean>;
+}
+
+function LiveDramaTrackerTicker({ tickerItemsList, onSaveItems }: LiveDramaTrackerTickerProps) {
+  const [newTickerItem, setNewTickerItem] = useState("");
+
+  const handleAddTickerItemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTickerItem.trim()) return;
+    const updated = [...tickerItemsList, newTickerItem.trim()];
+    const success = await onSaveItems(updated);
+    if (success) {
+      setNewTickerItem("");
+      alert("Drama alert added to ticker!");
+    }
+  };
+
+  const handleRemoveTickerItem = async (index: number) => {
+    const updated = tickerItemsList.filter((_, i) => i !== index);
+    const success = await onSaveItems(updated);
+    if (success) {
+      alert("Drama alert removed!");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+        <Flame className="text-[#FFD700] w-4 h-4 text-rose-500 animate-pulse" /> Live Drama Tracker CRUD
+      </h2>
+      <form onSubmit={handleAddTickerItemSubmit} className="space-y-2.5 mb-4">
+        <label htmlFor="ticker-item-input" className="sr-only">Ticker Item Text</label>
+        <input 
+          id="ticker-item-input"
+          type="text" 
+          value={newTickerItem} 
+          onChange={(e) => setNewTickerItem(e.target.value)}
+          placeholder="Ticker Item Text (e.g., URGENT: Ducky Bhai...)"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <button
+          type="submit"
+          className="w-full bg-zinc-800 hover:bg-zinc-750 text-white font-bold text-xs py-1.5 rounded border border-zinc-750 transition-all duration-200 hover:-translate-y-0.5 active:scale-98 active:translate-y-0"
+        >
+          Add Ticker Alert
+        </button>
+      </form>
+      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+        {tickerItemsList.map((item, index) => (
+          <div key={item + index} className="virtual-list-item flex items-start justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+            <span className="text-zinc-300 leading-normal pr-2">{item}</span>
+            <button
+              onClick={() => handleRemoveTickerItem(index)}
+              className="text-red-500 hover:text-red-450 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
+              title="Remove Ticker Alert"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface RotatingApiKeysProps {
+  initialKeys: string;
+  selectedModel: string;
+  onSaveKeys: (keys: string[]) => Promise<boolean>;
+  onModelChange: (model: string) => void;
+}
+
+function RotatingApiKeys({ initialKeys, selectedModel, onSaveKeys, onModelChange }: RotatingApiKeysProps) {
+  const [apiKeysInput, setApiKeysInput] = useState(initialKeys);
+
+  useEffect(() => {
+    setApiKeysInput(initialKeys);
+  }, [initialKeys]);
+
+  const handleSaveApiKeysSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const keysArray = apiKeysInput.split("\n").map(k => k.trim()).filter(Boolean);
+    const success = await onSaveKeys(keysArray);
+    if (success) {
+      alert("Rotating API keys updated successfully!");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-3">
+        <Key className="text-[#FFD700] w-4 h-4" /> Rotating API Keys Pool
+      </h2>
+      <p className="text-[10px] text-zinc-500 font-sans leading-relaxed mb-3">
+        Paste bulk API keys (one key per line) to automatically cycle and avoid single-key quota blocks.
+      </p>
+
+      <div className="mb-4">
+        <label htmlFor="gemini-model-select" className="text-[10px] text-zinc-400 font-mono block mb-1">Gemini Model for AI Generation</label>
+        <input
+          id="gemini-model-select"
+          type="text"
+          value={selectedModel}
+          onChange={(e) => onModelChange(e.target.value)}
+          placeholder="e.g. gemini-2.5-flash"
+          list="gemini-models"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-300 focus:border-[#FFD700] outline-none"
+        />
+        <datalist id="gemini-models">
+          <option value="gemini-2.5-flash" />
+          <option value="gemini-2.5-pro" />
+          <option value="gemini-1.5-flash" />
+          <option value="gemini-1.5-pro" />
+        </datalist>
+        <p className="text-[9px] text-zinc-550 font-mono mt-1">
+          Type any custom/future model name (e.g., custom fine-tuned models).
+        </p>
+      </div>
+
+      <form onSubmit={handleSaveApiKeysSubmit} className="space-y-3">
+        <div>
+          <label htmlFor="api-key-pool-textarea" className="text-[10px] text-zinc-400 font-mono block mb-1">API Key Pool</label>
+          <textarea
+            id="api-key-pool-textarea"
+            value={apiKeysInput}
+            onChange={(e) => setApiKeysInput(e.target.value)}
+            rows={4}
+            placeholder="AIzaSy...&#10;AIzaSy..."
+            className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none font-mono"
+          />
+        </div>
+        <button
+          type="submit"
+          className="w-full bg-[#FFD700]/10 border border-[#FFD700]/30 hover:bg-[#FFD700]/20 text-[#FFD700] font-semibold text-xs py-2.5 rounded transition-all duration-200 hover:-translate-y-0.5 active:scale-98 active:translate-y-0"
+        >
+          Save & Update Rotation Pool
+        </button>
+      </form>
+    </div>
+  );
+}
+
+interface ManageCreatorCategoriesProps {
+  categories: string[];
+  onSaveCategories: (categories: string[]) => Promise<boolean>;
+}
+
+function ManageCreatorCategories({ categories, onSaveCategories }: ManageCreatorCategoriesProps) {
+  const [newCategory, setNewCategory] = useState("");
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newCategory.trim();
+    if (!clean) return;
+    if (categories.includes(clean)) {
+      alert("Category already exists.");
+      return;
+    }
+    const updated = [...categories, clean];
+    const success = await onSaveCategories(updated);
+    if (success) {
+      setNewCategory("");
+      alert("Category added successfully!");
+    }
+  };
+
+  const handleRemoveCategory = async (cat: string) => {
+    if (!confirm(`Are you sure you want to remove the category "${cat}"? YouTubers currently using this category will keep it, but it will be removed from future selection options.`)) return;
+    const updated = categories.filter(c => c !== cat);
+    const success = await onSaveCategories(updated);
+    if (success) {
+      alert("Category removed!");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+        📁 Creator Categories CRUD
+      </h2>
+      <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
+        <label htmlFor="new-category-input" className="sr-only">New Category Name</label>
+        <input 
+          id="new-category-input"
+          type="text" 
+          value={newCategory} 
+          onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="New Category (e.g. Gamer)"
+          className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <button
+          type="submit"
+          className="bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-bold text-xs px-3 py-1.5 rounded transition-all duration-200 hover:-translate-y-0.5 active:scale-95 active:translate-y-0"
+        >
+          Add
+        </button>
+      </form>
+      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+        {categories.map((cat) => (
+          <div key={cat} className="virtual-list-item flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+            <span className="text-zinc-350">{cat}</span>
+            <button
+              onClick={() => handleRemoveCategory(cat)}
+              className="text-red-500 hover:text-red-450 p-1 transition-all duration-200 hover:scale-115 active:scale-90"
+              title="Remove Category"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface ManageArticleCategoriesProps {
+  categories: string[];
+  onSaveCategories: (categories: string[]) => Promise<boolean>;
+}
+
+function ManageArticleCategories({ categories, onSaveCategories }: ManageArticleCategoriesProps) {
+  const [newCategory, setNewCategory] = useState("");
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = newCategory.trim();
+    if (!clean) return;
+    if (categories.includes(clean)) {
+      alert("Category already exists.");
+      return;
+    }
+    const updated = [...categories, clean];
+    const success = await onSaveCategories(updated);
+    if (success) {
+      setNewCategory("");
+      alert("Category added successfully!");
+    }
+  };
+
+  const handleRemoveCategory = async (cat: string) => {
+    if (!confirm(`Are you sure you want to remove the category "${cat}"? Articles currently published under this category will keep it, but it will be removed from future selection options.`)) return;
+    const updated = categories.filter(c => c !== cat);
+    const success = await onSaveCategories(updated);
+    if (success) {
+      alert("Category removed!");
+    }
+  };
+
+  return (
+    <div className="glass-panel p-6 rounded-xl border border-zinc-800 shadow-2xl">
+      <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2 mb-4">
+        📁 Article Categories CRUD
+      </h2>
+      <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
+        <label htmlFor="new-article-category-input" className="sr-only">New Category Name</label>
+        <input 
+          id="new-article-category-input"
+          type="text" 
+          value={newCategory} 
+          onChange={(e) => setNewCategory(e.target.value)}
+          placeholder="New Category (e.g. Exposé)"
+          className="flex-1 bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none"
+        />
+        <button
+          type="submit"
+          className="bg-[#FFD700] hover:bg-[#ffe234] text-zinc-950 font-bold text-xs px-3 py-1.5 rounded transition-all duration-200 hover:-translate-y-0.5 active:scale-95 active:translate-y-0"
+        >
+          Add
+        </button>
+      </form>
+      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+        {categories.map((cat) => (
+          <div key={cat} className="virtual-list-item flex items-center justify-between text-xs border-b border-zinc-900 pb-1.5 font-mono">
+            <span className="text-zinc-350">{cat}</span>
+            <button
+              onClick={() => handleRemoveCategory(cat)}
+              className="text-red-500 hover:text-red-450 p-1 transition-all duration-200 hover:scale-115 active:scale-90"
+              title="Remove Category"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
-import { getArticles } from "@/lib/supabase";
+import { getArticles } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const articles = await getArticles();
-  const baseUrl = "https://mittified.media";
+  const baseUrl = "https://mittified.studio";
 
   const itemsXml = articles
     .map((art) => {
+      const cleanContent = (art.content || "").replace(/\]\]>/g, "]]&gt;");
       return `
     <item>
       <title>${escapeXml(art.title)}</title>
@@ -14,7 +17,7 @@ export async function GET() {
       <guid>${baseUrl}/articles/${art.slug}</guid>
       <pubDate>${new Date(art.publishedAt).toUTCString()}</pubDate>
       <description>${escapeXml(art.summary)}</description>
-      <content:encoded><![CDATA[${art.content}]]></content:encoded>
+      <content:encoded><![CDATA[${cleanContent}]]></content:encoded>
     </item>`;
     })
     .join("");

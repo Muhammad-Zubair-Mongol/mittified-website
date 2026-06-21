@@ -4,10 +4,12 @@ service cloud.firestore {
 
     // Helper: checks if the requesting user is authenticated with a whitelisted admin email
     function isWhitelistedAdmin() {
-      return request.auth != null && (
-        request.auth.token.email.lower() == "mittifiedbusiness@gmail.com" ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
-      );
+      return request.auth != null 
+        && (
+          request.auth.token.email.lower() == "mittifiedbusiness@gmail.com" ||
+          request.auth.token.email.lower() == "mittifiedbusiness@gamail.com" ||
+          exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower()))
+        );
     }
 
     // Public read-only access for general users. Write access only for admins.
@@ -21,9 +23,19 @@ service cloud.firestore {
       allow write: if isWhitelistedAdmin();
     }
 
-    // Whitelist rules: Only whitelisted admins can read or manage the admins registry list
+    // Whitelist rules: Users can retrieve their own record to verify their status. 
+    // Only whitelisted admins can list all or modify admin records.
     match /admins/{emailId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null && request.auth.token.email.lower() == emailId;
+      allow list, write: if isWhitelistedAdmin();
+    }
+
+    // Dynamic config rules: Restrict API keys to admins only.
+    match /site_config/api_keys {
+      allow read, write: if isWhitelistedAdmin();
+    }
+    match /site_config/{documentId} {
+      allow read: if true;
       allow write: if isWhitelistedAdmin();
     }
   }

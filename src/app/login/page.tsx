@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth, googleProvider, verifyAdminWhitelist } from "@/lib/firebase";
+import { auth, googleProvider, verifyAdminWhitelist } from "@/lib/db";
 import { signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { ArrowLeft, ShieldAlert } from "lucide-react";
@@ -37,7 +37,7 @@ export default function LoginPage() {
       }
     } else {
       // Simulate local login fallback (mock prompt selection)
-      const mockEmail = window.prompt("Enter Google account email to simulate Google Sign-in:", "admin@mittified.media");
+      const mockEmail = window.prompt("Enter Google account email to simulate Google Sign-in:", "admin@mittified.studio");
       if (!mockEmail) {
         setLoading(false);
         return;

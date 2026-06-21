@@ -5,7 +5,7 @@ export interface Creator {
   handle: string;
   avatarUrl: string;
   subscribers: number;
-  category: "Vlogger" | "Gamer" | "Tech" | "Infotainment" | "Drama/Rant" | "Comedy";
+  category: string;
   status: "Active" | "Hiatus" | "Drama/Exposed" | "Under Investigation";
   dramaMeter: number; // 0 to 100
   recentDramaTitle?: string;

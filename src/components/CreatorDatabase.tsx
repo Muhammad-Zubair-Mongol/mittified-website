@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { Creator } from "@/lib/mockData";
-import { getCreators } from "@/lib/supabase";
+import { getCreators, getCreatorCategories } from "@/lib/db";
 import { Search, Flame, Filter, SlidersHorizontal, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 export default function CreatorDatabase() {
   const [creators, setCreators] = useState<Creator[]>([]);
+  const [categories, setCategories] = useState<string[]>(["All", "Vlogger", "Gamer", "Tech", "Infotainment", "Drama/Rant", "Comedy"]);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -18,12 +19,14 @@ export default function CreatorDatabase() {
     async function load() {
       const data = await getCreators();
       setCreators(data);
+      
+      const dynamicCats = await getCreatorCategories();
+      setCategories(["All", ...dynamicCats]);
+      
       setLoading(false);
     }
     load();
   }, []);
-
-  const categories = ["All", "Vlogger", "Gamer", "Tech", "Infotainment", "Drama/Rant", "Comedy"];
   const statuses = ["All", "Active", "Hiatus", "Drama/Exposed", "Under Investigation"];
 
   const filteredCreators = creators
