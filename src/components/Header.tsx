@@ -115,7 +115,7 @@ export default function Header({ totalSubscribers, exposedCount }: HeaderProps) 
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-3">
             <img 
-              src="/logo.jpg" 
+              src="/logo.png" 
               alt="Mittified Logo" 
               className="w-8 h-8 rounded-full border border-[#FFD700]/30 object-cover" 
             />

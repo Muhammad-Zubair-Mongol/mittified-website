@@ -141,6 +141,26 @@ export default function AddCreatorForm({ categories, onCreatorAdded }: AddCreato
               placeholder="https://images.unsplash.com/..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none mb-1.5"
             />
+            {creatorAvatar && (
+              <div className="relative w-16 h-16 mb-2 rounded-full border border-zinc-800 overflow-hidden bg-zinc-950 mx-auto flex items-center justify-center group">
+                <img 
+                  key={creatorAvatar}
+                  src={creatorAvatar} 
+                  alt="Avatar Preview" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setCreatorAvatar("")}
+                  className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-all duration-200 cursor-pointer rounded-full"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <input
               type="file"
               accept="image/*"

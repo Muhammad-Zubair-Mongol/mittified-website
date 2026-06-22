@@ -1,10 +1,11 @@
 import { MetadataRoute } from "next";
 import { getArticles, getCreators } from "@/lib/db";
+import { BASE_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = "https://mittified.studio";
+  const baseUrl = BASE_URL;
 
   // Fetch all articles & creators dynamically
   const articles = await getArticles();

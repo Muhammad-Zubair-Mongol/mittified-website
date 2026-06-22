@@ -1,9 +1,19 @@
 import React from "react";
+import type { Metadata } from "next";
+import { BASE_URL } from "@/lib/config";
 import Link from "next/link";
 import { getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ArrowLeft, Shield } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy | Mittified Media",
+  description: "Read the Privacy Policy for Mittified Media Hub, outlining how we collect, use, and protect your data, including analytics and cookies policy.",
+  alternates: {
+    canonical: `${BASE_URL}/privacy`,
+  },
+};
 
 export const revalidate = 900; // 15 mins page revalidation (ISR)
 

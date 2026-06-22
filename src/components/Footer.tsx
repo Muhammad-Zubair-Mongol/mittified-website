@@ -78,7 +78,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-3">
               <img 
-                src="/logo.jpg" 
+                src="/logo.png" 
                 alt="Mittified Logo" 
                 className="w-10 h-10 rounded-full border border-zinc-800 object-cover" 
               />
@@ -126,7 +126,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-zinc-900 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p>&copy; {new Date().getFullYear()} Mittified Media Hub. All rights reserved.</p>
+          <p suppressHydrationWarning>&copy; {new Date().getFullYear()} Mittified Media Hub. All rights reserved.</p>
         </div>
       </div>
     </footer>

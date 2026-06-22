@@ -5,6 +5,7 @@ service cloud.firestore {
     // Helper: checks if the requesting user is authenticated with a whitelisted admin email
     function isWhitelistedAdmin() {
       return request.auth != null 
+        && request.auth.token.email_verified == true
         && (
           request.auth.token.email.lower() == "mittifiedbusiness@gmail.com" ||
           request.auth.token.email.lower() == "mittifiedbusiness@gamail.com" ||
@@ -28,6 +29,18 @@ service cloud.firestore {
     match /admins/{emailId} {
       allow get: if request.auth != null && request.auth.token.email.lower() == emailId;
       allow list, write: if isWhitelistedAdmin();
+    }
+
+    // Article Analytics rules: Public can track events/updates, only admins can view analytics
+    match /article_analytics/{sessionId} {
+      allow create, update: if true;
+      allow read, delete: if isWhitelistedAdmin();
+    }
+
+    // Subscribers rules: Public can subscribe to alerts, admins can read
+    match /subscribers/{emailId} {
+      allow create: if true;
+      allow read, write: if isWhitelistedAdmin();
     }
 
     // Dynamic config rules: Restrict API keys to admins only.

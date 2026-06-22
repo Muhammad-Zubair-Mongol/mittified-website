@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { BASE_URL } from "@/lib/config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,7 +18,23 @@ export const metadata: Metadata = {
   title: "Mittified Media - Pakistani YouTube Tracker & Exposés",
   description: "The premier independent news source tracking the Pakistani YouTube ecosystem. Uncovering drama, tracking statistics, and archiving creators.",
   alternates: {
-    canonical: "https://mittified.studio",
+    canonical: BASE_URL,
+  },
+  openGraph: {
+    siteName: "Mittified Media",
+    type: "website",
+    images: [
+      {
+        url: `${BASE_URL}/logo.png`,
+        width: 144,
+        height: 144,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    site: "@mittified",
+    images: [`${BASE_URL}/logo.png`],
   },
 };
 

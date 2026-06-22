@@ -1,30 +1,60 @@
 import React from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { getArticles, getCreators } from "@/lib/db";
+import type { Metadata } from "next";
+import { BASE_URL } from "@/lib/config";
+import { getArticles, getCreators, getArticleCategories } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AdsenseContainer from "@/components/AdsenseContainer";
 import CreatorDatabase from "@/components/CreatorDatabase";
+import ArticleFeed from "@/components/ArticleFeed";
+import AlertSubscription from "@/components/AlertSubscription";
 import { generateCreatorDirectorySchema } from "@/lib/schema";
-import { Flame, ArrowRight, Eye, Calendar, Award } from "lucide-react";
+import { Sparkles } from "lucide-react";
+
+const title = "Mittified Media - Pakistani YouTube Tracker, Database & News";
+const description = "Track live stats, monthly viewership trends, and audience engagement benchmarks for Pakistan's top influencers and YouTube drama archives.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: {
+    canonical: BASE_URL,
+  },
+  openGraph: {
+    title,
+    description,
+    url: BASE_URL,
+    siteName: "Mittified Media",
+    images: [
+      {
+        url: `${BASE_URL}/logo.png`,
+        width: 144,
+        height: 144,
+        alt: "Mittified Media Logo",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [`${BASE_URL}/logo.png`],
+  },
+};
 
 export const revalidate = 900; // 15 mins page revalidation (ISR) as per Plan.md
 
 export default async function Home() {
   const articles = await getArticles();
   const creators = await getCreators();
+  const categories = await getArticleCategories();
 
   // Aggregate metrics for Header
   const totalSubscribers = creators.reduce((acc, c) => acc + c.subscribers, 0);
   const exposedCount = creators.filter(c => c.status === "Drama/Exposed").length;
 
   const directorySchema = generateCreatorDirectorySchema(creators);
-
-  // Split articles by category
-  const mainFeatured = articles[0];
-  const sideFeatured = articles.slice(1, 3);
-  const restArticles = articles.slice(3);
 
   return (
     <>
@@ -41,128 +71,41 @@ export default async function Home() {
         {/* Top Header Ad Spacer to prevent shift */}
         <AdsenseContainer placement="header" adSlot="99283741" />
 
-        {/* Hero Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          {/* Main Featured Article (Glass design) */}
-          {mainFeatured && (
-            <div className="lg:col-span-2 flex flex-col justify-between glass-liquid rounded-2xl overflow-hidden shadow-2xl relative group">
-              <div className="relative h-96 w-full overflow-hidden">
-                <Image 
-                  src={mainFeatured.coverImage} 
-                  alt={mainFeatured.title} 
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 66vw"
-                  className="object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-                <span className="absolute top-4 left-4 bg-red-600 text-white font-mono font-bold text-xs uppercase px-2.5 py-1 rounded">
-                  {mainFeatured.category}
-                </span>
-              </div>
-              
-              <div className="p-6 md:p-8 flex-1 flex flex-col justify-between bg-zinc-950/20">
-                <div>
-                  <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono mb-3">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
-                      {new Date(mainFeatured.publishedAt).toLocaleDateString()}
-                    </span>
-                    <span>By {mainFeatured.author}</span>
-                  </div>
-                  <h1 className="text-2xl md:text-3xl font-black text-white mb-4 group-hover:text-[#FFD700] transition-colors leading-tight">
-                    {mainFeatured.title}
-                  </h1>
-                  <p className="text-zinc-400 text-sm md:text-base leading-relaxed mb-6">
-                    {mainFeatured.summary}
-                  </p>
-                </div>
-                <div>
-                  <Link 
-                    href={`/articles/${mainFeatured.slug}`}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FFD700] uppercase tracking-wider group/link hover:underline transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
-                  >
-                    Read Full Investigation <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" aria-hidden="true" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sidebar Highlights */}
-          <div className="flex flex-col gap-6">
-            <div className="border-l-2 border-[#FFD700] pl-3 py-1">
-              <h2 className="text-xl font-bold tracking-tight text-white uppercase font-mono">Trending Updates</h2>
-            </div>
-            
-            {sideFeatured.map((art) => (
-              <Link 
-                href={`/articles/${art.slug}`}
-                key={art.id}
-                className="glass-liquid glass-liquid-interactive p-4 rounded-xl block group transition-all duration-200 hover:-translate-y-1 active:scale-[0.98] hover:shadow-lg"
-              >
-                <span className="text-[10px] text-[#FFD700] font-mono font-bold uppercase block mb-1">
-                  {art.category}
-                </span>
-                <h3 className="text-sm font-bold text-white group-hover:text-[#FFD700] transition-colors line-clamp-2 leading-snug mb-2">
-                  {art.title}
-                </h3>
-                <p className="text-zinc-400 text-xs line-clamp-2 leading-relaxed">
-                  {art.summary}
-                </p>
-                <div className="flex items-center justify-between mt-3 text-[10px] text-zinc-500 font-mono">
-                  <span>{new Date(art.publishedAt).toLocaleDateString()}</span>
-                  <span className="text-zinc-400 font-semibold group-hover:underline">Read Now &rarr;</span>
-                </div>
-              </Link>
-            ))}
-
-            {/* In-feed Ad banner matching metrics */}
-            <AdsenseContainer placement="in-feed" adSlot="88172635" />
-          </div>
+        {/* Dynamic Interactive Article Feed (Pretzel - free engaging content) */}
+        <div className="mb-16">
+          <ArticleFeed initialArticles={articles} categories={categories} />
         </div>
 
-        {/* Section: Creator Tracker */}
-        <section className="border-t border-zinc-900 pt-12 pb-16" id="creators">
+        {/* Premium Upgrade Hook & Creator Database Section (Water - selling the value/analytics) */}
+        <section className="border-t border-zinc-900 pt-16 pb-16 scroll-reveal" id="creators">
+          <div className="glass-panel p-6 rounded-2xl border border-[#FFD700]/20 bg-zinc-950/40 mb-10 relative overflow-hidden group">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFD700]/5 blur-[80px] pointer-events-none rounded-full" />
+            <div className="absolute -bottom-8 -left-8 w-48 h-48 bg-amber-500/5 blur-[60px] pointer-events-none rounded-full" />
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+              <div className="max-w-2xl">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#FFD700]/10 border border-[#FFD700]/20 text-[#FFD700] text-[10px] font-mono font-bold uppercase tracking-wider mb-3">
+                  <Sparkles className="w-3.5 h-3.5" /> PRO INTELLIGENCE UPGRADE
+                </div>
+                <h3 className="text-xl md:text-2xl font-black text-white uppercase tracking-tight mb-2">
+                  Creator Analytics & Market Intelligence Suite
+                </h3>
+                <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
+                  Track dynamic heat indexes, real-time subscriber changes, monthly viewership trends, and audience engagement benchmarks for Pakistan&apos;s top influencers. Elevate your media strategy.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 items-center shrink-0">
+                <button className="px-5 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 cursor-pointer">
+                  Request API Access
+                </button>
+                <AlertSubscription />
+              </div>
+            </div>
+          </div>
+
           <CreatorDatabase />
         </section>
-
-        {/* Section: Investigation Archive */}
-        {restArticles.length > 0 && (
-          <section className="border-t border-zinc-900 pt-12 pb-16" id="news">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Recent Archives</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {restArticles.map((art) => (
-                <div key={art.id} className="glass-liquid rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-200 hover:-translate-y-1 hover:shadow-lg group">
-                  <div className="relative h-48 w-full">
-                    <Image 
-                      src={art.coverImage} 
-                      alt={art.title} 
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="object-cover" 
-                    />
-                  </div>
-                  <div className="p-5 flex-1 flex flex-col justify-between bg-zinc-950/20">
-                    <div>
-                      <span className="text-[10px] text-zinc-500 font-mono block mb-1 uppercase">{art.category}</span>
-                      <h3 className="text-base font-bold text-white mb-2 line-clamp-2">{art.title}</h3>
-                      <p className="text-zinc-400 text-xs line-clamp-3 mb-4 leading-relaxed">{art.summary}</p>
-                    </div>
-                    <Link 
-                      href={`/articles/${art.slug}`}
-                      className="text-xs font-semibold text-[#FFD700] hover:underline flex items-center gap-1 transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
-                    >
-                      Read full article &rarr;
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </main>
 
       {/* Reusable Page Footer */}

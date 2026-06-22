@@ -14,6 +14,11 @@ const s3Client = new S3Client({
 
 export async function POST(req: NextRequest) {
   try {
+    // Defense-in-depth check for missing R2 configuration
+    if (!process.env.CLOUDFLARE_R2_ENDPOINT || !process.env.CLOUDFLARE_R2_ACCESS_KEY_ID || !process.env.CLOUDFLARE_R2_SECRET_ACCESS_KEY) {
+      return NextResponse.json({ error: "Cloudflare R2 is not configured on this environment." }, { status: 503 });
+    }
+
     const { adminAuth, adminDb } = await import("@/lib/firebase-admin");
     // Verify Firebase Admin ID Token
     const authHeader = req.headers.get("Authorization");

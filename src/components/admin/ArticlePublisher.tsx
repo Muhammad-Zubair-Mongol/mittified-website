@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { FileText, Send } from "lucide-react";
+import SEOChecker from "./SEOChecker";
 import { Creator, Article } from "@/lib/mockData";
 import { addArticle, uploadImage, getNextActiveKey } from "@/lib/db";
 
@@ -60,14 +61,26 @@ export default function ArticlePublisher({ creators, selectedModel, categories, 
         return;
       }
 
-      const promptText = `You are an investigative journalist tracking Pakistani YouTube ecosystem drama, metrics, and exposés.
-Generate complete article details based on this title: "${artTitle}".
-You MUST return a valid JSON object only. Do not wrap in markdown code block markers. Just return the raw JSON matching this interface:
+      const promptText = `You are a senior investigative journalist at a top-tier media outlet covering Pakistani YouTube creators.
+
+Write a sharp, punchy article based on this title: "${artTitle}"
+
+Rules:
+- Write like a human journalist, NOT like AI. Use active voice, short sentences, concrete details.
+- NEVER use these words/phrases: delve, tapestry, testament, landscape, furthermore, moreover, paradigm, leverage, synergy, game-changer, deep dive, unpack, "it's important to note", "in today's digital age", "at the end of the day", "needless to say"
+- Start with a bold, attention-grabbing lede paragraph (no generic intros)
+- Use specific numbers, dates, and names when possible
+- Include at least 2 subheadings using <h2> tags
+- Write 300-500 words minimum
+- End with a forward-looking statement, not a generic conclusion
+- Make it feel urgent and newsworthy
+
+You MUST return a valid JSON object only. Do not wrap in markdown code block markers. Just return the raw JSON:
 {
-  "summary": "Descriptive meta summary hook (max 150 characters)",
-  "content": "Detailed investigation article content in clean HTML containing multiple paragraphs (<p>), bold tags (<strong>), and headings (<h2>/<h3>) explaining the drama (max 400 words)",
+  "summary": "Punchy meta description, max 155 characters, include a hook",
+  "content": "Full HTML article with <p>, <strong>, <h2>, <h3> tags. Min 300 words.",
   "category": "Controversies" | "Milestones" | "Analysis",
-  "tags": ["Tag1", "Tag2", "Tag3"]
+  "tags": ["Tag1", "Tag2", "Tag3", "Tag4"]
 }`;
 
       const response = await fetch(
@@ -255,6 +268,30 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
               placeholder="https://images.unsplash.com/..."
               className="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-650 focus:border-[#FFD700] outline-none mb-1.5"
             />
+            {artCover && (
+              <div className="relative w-full h-24 mb-2 rounded border border-zinc-800 overflow-hidden bg-zinc-950 flex items-center justify-center group">
+                <div 
+                  className="absolute inset-0 bg-cover bg-center filter blur-md opacity-30 scale-105"
+                  style={{ backgroundImage: `url(${artCover})` }}
+                />
+                <img 
+                  key={artCover}
+                  src={artCover} 
+                  alt="Cover Preview" 
+                  className="relative z-10 max-h-full max-w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setArtCover("")}
+                  className="absolute top-1 right-1 bg-red-950/80 border border-red-800 hover:bg-red-900 text-white rounded px-2 py-0.5 text-[9px] font-bold transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <input
               type="file"
               accept="image/*"
@@ -324,6 +361,20 @@ You MUST return a valid JSON object only. Do not wrap in markdown code block mar
           <Send className="w-4 h-4" /> Publish Article & Sync Edges
         </button>
       </form>
+
+      {/* SEO Analysis */}
+      <div className="mt-6">
+        <SEOChecker
+          title={artTitle}
+          slug={artSlug}
+          summary={artSummary}
+          content={artContent}
+          tags={artTags}
+          creators={creators}
+          onContentFix={(fixed) => setArtContent(fixed)}
+          onSummaryFix={(fixed) => setArtSummary(fixed)}
+        />
+      </div>
     </div>
   );
 }

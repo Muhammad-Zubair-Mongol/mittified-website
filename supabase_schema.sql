@@ -38,9 +38,32 @@ CREATE TABLE IF NOT EXISTS public.articles (
     youtube_video_id TEXT
 );
 
+-- CREATE ARTICLE ANALYTICS TABLE
+CREATE TABLE IF NOT EXISTS public.article_analytics (
+    id TEXT PRIMARY KEY,
+    article_id TEXT REFERENCES public.articles(id) ON DELETE CASCADE,
+    slug TEXT NOT NULL,
+    category TEXT NOT NULL,
+    title TEXT NOT NULL,
+    visitor_id TEXT NOT NULL,
+    device TEXT CHECK (device IN ('Desktop', 'Tablet', 'Mobile')),
+    referrer TEXT,
+    duration INTEGER DEFAULT 0,
+    is_completed BOOLEAN DEFAULT false,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- CREATE SUBSCRIBERS TABLE
+CREATE TABLE IF NOT EXISTS public.subscribers (
+    email TEXT PRIMARY KEY,
+    subscribed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- ENABLE ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.creators ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.article_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subscribers ENABLE ROW LEVEL SECURITY;
 
 -- CREATE POLICY: PUBLIC READ ACCESS FOR EVERYONE
 CREATE POLICY "Allow public read access to creators"
@@ -73,6 +96,50 @@ WITH CHECK (auth.jwt()->>'email' IN (
 
 CREATE POLICY "Allow write/update for admins only on articles"
 ON public.articles
+FOR ALL
+TO authenticated
+USING (auth.jwt()->>'email' IN (
+    'admin@mittified.media',
+    'mitti@mittified.media'
+))
+WITH CHECK (auth.jwt()->>'email' IN (
+    'admin@mittified.media',
+    'admin@mittified.media',
+    'mitti@mittified.media'
+));
+
+-- CREATE POLICY: ALLOW PUBLIC TO INSERT AND UPDATE ANALYTICS
+CREATE POLICY "Allow public insert and update on article_analytics"
+ON public.article_analytics
+FOR ALL
+TO public
+USING (true)
+WITH CHECK (true);
+
+-- CREATE POLICY: WRITE/UPDATE/READ ACCESS FOR AUTHENTICATED ADMIN ONLY ON ANALYTICS
+CREATE POLICY "Allow admin read and write on article_analytics"
+ON public.article_analytics
+FOR ALL
+TO authenticated
+USING (auth.jwt()->>'email' IN (
+    'admin@mittified.media',
+    'mitti@mittified.media'
+))
+WITH CHECK (auth.jwt()->>'email' IN (
+    'admin@mittified.media',
+    'mitti@mittified.media'
+));
+
+-- CREATE POLICY: ALLOW PUBLIC TO INSERT SUBSCRIBERS
+CREATE POLICY "Allow public insert on subscribers"
+ON public.subscribers
+FOR INSERT
+TO public
+WITH CHECK (true);
+
+-- CREATE POLICY: ALLOW ADMIN TO READ/WRITE ALL ON SUBSCRIBERS
+CREATE POLICY "Allow admin read and write on subscribers"
+ON public.subscribers
 FOR ALL
 TO authenticated
 USING (auth.jwt()->>'email' IN (

@@ -1,4 +1,6 @@
 import React from "react";
+import type { Metadata } from "next";
+import { BASE_URL } from "@/lib/config";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCreators, getArticles, getCreatorById, getArticlesByCreatorId } from "@/lib/db";
@@ -18,6 +20,45 @@ interface PageProps {
 }
 
 export const revalidate = 900;
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const creator = await getCreatorById(id);
+  if (!creator) {
+    return {
+      title: "Creator Not Found | Mittified Media",
+      description: "This content creator is not tracked in our database.",
+    };
+  }
+
+  const cleanBio = creator.bio ? creator.bio.replace(/<[^>]*>/g, '').substring(0, 160) : "";
+
+  return {
+    title: `${creator.name} (${creator.handle}) - Channel Metrics & Analytics | Mittified Media`,
+    description: cleanBio || `Detailed view, stats, history, and coverage report for ${creator.name} in Pakistan's YouTube ecosystem.`,
+    alternates: {
+      canonical: `${BASE_URL}/creators/${creator.id}`,
+    },
+    openGraph: {
+      title: `${creator.name} Channel Metrics & Drama Tracker`,
+      description: cleanBio || `Analytics audit dashboard, total subscribers, traffic metrics, and exposure stats for ${creator.name}.`,
+      url: `${BASE_URL}/creators/${creator.id}`,
+      images: [
+        {
+          url: creator.avatarUrl,
+          alt: creator.name,
+        }
+      ],
+      type: "profile",
+    },
+    twitter: {
+      card: "summary",
+      title: `${creator.name} Channel Profile`,
+      description: cleanBio || `Analytics dashboard for ${creator.name}.`,
+      images: [creator.avatarUrl],
+    }
+  };
+}
 
 export async function generateStaticParams() {
   const creators = await getCreators();
@@ -100,7 +141,7 @@ export default async function CreatorDetailPage({ params }: PageProps) {
         </div>
 
         {/* Analytics Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 scroll-reveal">
           {/* Subscribers Stats Card */}
           <div className="glass-panel p-6 rounded-xl border border-zinc-800/80">
             <span className="text-zinc-500 text-[10px] font-mono block mb-1">TOTAL REACH</span>
@@ -162,12 +203,18 @@ export default async function CreatorDetailPage({ params }: PageProps) {
             ) : (
               <div className="flex flex-col gap-6">
                 {relatedArticles.map((art) => (
-                  <div key={art.id} className="glass-panel p-5 rounded-xl border border-zinc-800 flex flex-col md:flex-row gap-4 items-start">
-                    <img 
-                      src={art.coverImage} 
-                      alt={art.title} 
-                      className="w-full md:w-40 h-28 object-cover rounded-lg border border-zinc-800"
-                    />
+                  <div key={art.id} className="glass-panel p-5 rounded-xl border border-zinc-800 flex flex-col md:flex-row gap-4 items-start scroll-reveal">
+                    <div className="relative w-full md:w-40 h-28 bg-zinc-950 rounded-lg overflow-hidden border border-zinc-800 flex items-center justify-center flex-shrink-0">
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center filter blur-md opacity-35 scale-105"
+                        style={{ backgroundImage: `url(${art.coverImage})` }}
+                      />
+                      <img 
+                        src={art.coverImage} 
+                        alt={art.title} 
+                        className="relative z-10 max-w-full max-h-full object-contain"
+                      />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-[10px] text-[#FFD700] font-mono font-bold uppercase">{art.category}</span>
                       <h3 className="text-base font-bold text-white mt-1 mb-2 hover:text-[#FFD700] transition-colors">

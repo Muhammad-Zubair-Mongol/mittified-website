@@ -24,7 +24,8 @@ import {
   saveArticleCategories,
   auth,
   verifyAdminWhitelist,
-  NavLink
+  NavLink,
+  formatDate
 } from "@/lib/db";
 import { signOut } from "firebase/auth";
 import { Creator, Article } from "@/lib/mockData";
@@ -34,11 +35,20 @@ import ArticlePublisher from "@/components/admin/ArticlePublisher";
 import AddCreatorForm from "@/components/admin/AddCreatorForm";
 import CreatorEditor from "@/components/admin/CreatorEditor";
 import ArticleEditor from "@/components/admin/ArticleEditor";
+import ImageUploadGuide from "@/components/admin/ImageUploadGuide";
+import ArticleAnalyticsDashboard from "@/components/admin/ArticleAnalyticsDashboard";
 
 export default function AdminPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"management" | "analytics">("management");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.title = "Admin Console | Mittified Media";
+    }
+  }, []);
 
   // Lists
   const [creators, setCreators] = useState<Creator[]>([]);
@@ -318,137 +328,171 @@ export default function AdminPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Core Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Input Form Areas (Col span 2) */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Form: Add Blog Article */}
-            <ArticlePublisher 
-              creators={creators} 
-              selectedModel={selectedModel} 
-              categories={articleCategories}
-              onArticlePublished={handleArticlePublished} 
-            />
-
-            {/* Form: Add Creator */}
-            <AddCreatorForm 
-              categories={creatorCategories}
-              onCreatorAdded={handleCreatorAdded} 
-            />
-          </div>
-
-          {/* Sidebar controls (Col span 1) */}
-          <div className="space-y-6">
-            
-            {/* Update Creator Profiles */}
-            <CreatorEditor 
-              creators={creators} 
-              categories={creatorCategories}
-              onCreatorUpdated={handleCreatorUpdated} 
-            />
-
-            {/* Update Article Profiles */}
-            <ArticleEditor 
-              articles={articles}
-              categories={articleCategories}
-              onArticleUpdated={handleArticleUpdated}
-            />
-
-            {/* List of articles currently published */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">
-                📰 Active Publications ({articles.length})
-              </h2>
-              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                {articles.map(art => (
-                  <div key={art.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] text-[#FFD700] font-mono block">{art.category}</span>
-                      <Link href={`/articles/${art.slug}`} className="font-bold text-zinc-300 hover:text-white line-clamp-1 hover:underline">
-                        {art.title}
-                      </Link>
-                      <span className="text-[10px] text-zinc-500 font-mono">{new Date(art.publishedAt).toLocaleDateString()}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteArticle(art.id)}
-                      className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
-                      title="Delete Publication"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* List of registered creators */}
-            <div className="glass-panel p-6 rounded-xl border border-zinc-800">
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">
-                👥 Tracked Creators ({creators.length})
-              </h2>
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                {creators.map(c => (
-                  <div key={c.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <span className="font-bold text-zinc-300 block truncate">{c.name}</span>
-                      <span className="text-[10px] text-zinc-500 font-mono block truncate">{c.handle}</span>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteCreator(c.id)}
-                      className="text-red-500 hover:text-red-450 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
-                      title="Delete Creator"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Whitelisted Admins List & CRUD */}
-            <WhitelistedAdmins 
-              whitelistEmails={whitelistEmails} 
-              onAddEmail={handleAddWhitelistEmail} 
-              onRemoveEmail={handleRemoveWhitelistEmail} 
-            />
-
-            {/* Creator Categories List & CRUD */}
-            <ManageCreatorCategories 
-              categories={creatorCategories}
-              onSaveCategories={handleSaveCreatorCategories}
-            />
-
-            {/* Article Categories List & CRUD */}
-            <ManageArticleCategories 
-              categories={articleCategories}
-              onSaveCategories={handleSaveArticleCategories}
-            />
-
-            {/* Dynamic Navigation Links CRUD */}
-            <HeaderLinksCrud 
-              navLinksList={navLinksList} 
-              onSaveLinks={handleSaveNavLinksList} 
-            />
-
-            {/* Live Drama Tracker Ticker CRUD */}
-            <LiveDramaTrackerTicker 
-              tickerItemsList={tickerItemsList} 
-              onSaveItems={handleSaveTickerItemsList} 
-            />
-
-            {/* Rotating API Keys Setup */}
-            <RotatingApiKeys 
-              initialKeys={apiKeysInput} 
-              selectedModel={selectedModel} 
-              onSaveKeys={handleSaveApiKeys} 
-              onModelChange={handleSaveSelectedModel} 
-            />
-
-          </div>
-
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-zinc-800 mb-8 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab("management")}
+            className={`px-5 py-3 font-mono font-bold text-xs uppercase tracking-wider border-b-2 transition-all duration-200 cursor-pointer whitespace-nowrap ${
+              activeTab === "management"
+                ? "border-[#FFD700] text-white"
+                : "border-transparent text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            📂 Content Management
+          </button>
+          <button
+            onClick={() => setActiveTab("analytics")}
+            className={`px-5 py-3 font-mono font-bold text-xs uppercase tracking-wider border-b-2 transition-all duration-200 cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+              activeTab === "analytics"
+                ? "border-[#FFD700] text-white"
+                : "border-transparent text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            📊 Real-Time Analytics Dashboard
+          </button>
         </div>
+
+        {activeTab === "management" ? (
+          /* Core Layout Grid */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Main Input Form Areas (Col span 2) */}
+            <div className="lg:col-span-2 space-y-8">
+              
+              {/* Form: Add Blog Article */}
+              <ArticlePublisher 
+                creators={creators} 
+                selectedModel={selectedModel} 
+                categories={articleCategories}
+                onArticlePublished={handleArticlePublished} 
+              />
+
+              {/* Form: Add Creator */}
+              <AddCreatorForm 
+                categories={creatorCategories}
+                onCreatorAdded={handleCreatorAdded} 
+              />
+            </div>
+
+            {/* Sidebar controls (Col span 1) */}
+            <div className="space-y-6">
+              
+              {/* Image Upload Guide */}
+              <ImageUploadGuide />
+
+              {/* Update Creator Profiles */}
+              <CreatorEditor 
+                creators={creators} 
+                categories={creatorCategories}
+                onCreatorUpdated={handleCreatorUpdated} 
+              />
+
+              {/* Update Article Profiles */}
+              <ArticleEditor 
+                articles={articles}
+                categories={articleCategories}
+                creators={creators}
+                onArticleUpdated={handleArticleUpdated}
+              />
+
+              {/* List of articles currently published */}
+              <div className="glass-panel p-6 rounded-xl border border-zinc-800">
+                <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">
+                  📰 Active Publications ({articles.length})
+                </h2>
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  {articles.map(art => (
+                    <div key={art.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] text-[#FFD700] font-mono block">{art.category}</span>
+                        <Link href={`/articles/${art.slug}`} className="font-bold text-zinc-300 hover:text-white line-clamp-1 hover:underline">
+                          {art.title}
+                        </Link>
+                        <span className="text-[10px] text-zinc-500 font-mono">{formatDate(art.publishedAt)}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteArticle(art.id)}
+                        className="text-red-500 hover:text-red-400 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
+                        title="Delete Publication"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* List of registered creators */}
+              <div className="glass-panel p-6 rounded-xl border border-zinc-800">
+                <h2 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">
+                  👥 Tracked Creators ({creators.length})
+                </h2>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                  {creators.map(c => (
+                    <div key={c.id} className="virtual-list-item border-b border-zinc-900 pb-2 text-xs flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-zinc-300 block truncate">{c.name}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono block truncate">{c.handle}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCreator(c.id)}
+                        className="text-red-500 hover:text-red-450 p-1 flex-shrink-0 transition-all duration-200 hover:scale-115 active:scale-90"
+                        title="Delete Creator"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Whitelisted Admins List & CRUD */}
+              <WhitelistedAdmins 
+                whitelistEmails={whitelistEmails} 
+                onAddEmail={handleAddWhitelistEmail} 
+                onRemoveEmail={handleRemoveWhitelistEmail} 
+              />
+
+              {/* Creator Categories List & CRUD */}
+              <ManageCreatorCategories 
+                categories={creatorCategories}
+                onSaveCategories={handleSaveCreatorCategories}
+              />
+
+              {/* Article Categories List & CRUD */}
+              <ManageArticleCategories 
+                categories={articleCategories}
+                onSaveCategories={handleSaveArticleCategories}
+              />
+
+              {/* Dynamic Navigation Links CRUD */}
+              <HeaderLinksCrud 
+                navLinksList={navLinksList} 
+                onSaveLinks={handleSaveNavLinksList} 
+              />
+
+              {/* Live Drama Tracker Ticker CRUD */}
+              <LiveDramaTrackerTicker 
+                tickerItemsList={tickerItemsList} 
+                onSaveItems={handleSaveTickerItemsList} 
+              />
+
+              {/* Rotating API Keys Setup */}
+              <RotatingApiKeys 
+                initialKeys={apiKeysInput} 
+                selectedModel={selectedModel} 
+                onSaveKeys={handleSaveApiKeys} 
+                onModelChange={handleSaveSelectedModel} 
+              />
+
+            </div>
+
+          </div>
+        ) : (
+          <div>
+            <ArticleAnalyticsDashboard />
+          </div>
+        )}
 
       </main>
     </div>

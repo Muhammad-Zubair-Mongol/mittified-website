@@ -1,4 +1,5 @@
 import { Creator, Article } from "./mockData";
+import { BASE_URL } from "./config";
 
 export function generateArticleSchema(article: Article) {
   return {
@@ -18,12 +19,12 @@ export function generateArticleSchema(article: Article) {
       "name": "Mittified Media",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://mittified.studio/logo.png"
+        "url": `${BASE_URL}/logo.png`
       }
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://mittified.studio/articles/${article.slug}`
+      "@id": `${BASE_URL}/articles/${article.slug}`
     }
   };
 }
@@ -56,7 +57,7 @@ export function generateCreatorDirectorySchema(creators: Creator[]) {
         "@type": "Person",
         "name": creator.name,
         "jobTitle": "Content Creator",
-        "url": `https://mittified.studio/creators/${creator.id}`,
+        "url": `${BASE_URL}/creators/${creator.id}`,
         "sameAs": [
           creator.socials.youtube,
           creator.socials.instagram,

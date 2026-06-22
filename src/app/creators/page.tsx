@@ -1,9 +1,43 @@
 import React from "react";
+import type { Metadata } from "next";
+import { BASE_URL } from "@/lib/config";
 import { getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CreatorDatabase from "@/components/CreatorDatabase";
 import AdsenseContainer from "@/components/AdsenseContainer";
+
+const title = "Pakistani YouTube Creator Database | Mittified Media";
+const description = "Browse the complete directory of Pakistani YouTube creators, active status, total reach metrics, monthly viewership trends, and drama meters.";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  alternates: {
+    canonical: `${BASE_URL}/creators`,
+  },
+  openGraph: {
+    title,
+    description,
+    url: `${BASE_URL}/creators`,
+    siteName: "Mittified Media",
+    images: [
+      {
+        url: `${BASE_URL}/logo.png`,
+        width: 144,
+        height: 144,
+        alt: "Mittified Media Logo",
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: [`${BASE_URL}/logo.png`],
+  },
+};
 
 export const revalidate = 900; // ISR revalidation
 

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getArticles } from "@/lib/db";
+import { BASE_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const articles = await getArticles();
-  const baseUrl = "https://mittified.studio";
+  const articles = await getArticles(30);
+  const baseUrl = BASE_URL;
 
   const itemsXml = articles
     .map((art) => {

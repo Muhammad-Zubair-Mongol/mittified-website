@@ -213,6 +213,26 @@ export default function CreatorEditor({ creators, categories, onCreatorUpdated }
                 onChange={(e) => setAvatarUrl(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-855 rounded px-2 py-1 text-[11px] text-white outline-none focus:border-[#FFD700] mb-1"
               />
+              {avatarUrl && (
+                <div className="relative w-14 h-14 mb-2 rounded-full border border-zinc-800 overflow-hidden bg-zinc-950 mx-auto flex items-center justify-center group">
+                  <img 
+                    key={avatarUrl}
+                    src={avatarUrl} 
+                    alt="Avatar Preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAvatarUrl("")}
+                    className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-all duration-200 cursor-pointer rounded-full"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
               <input
                 type="file"
                 accept="image/*"

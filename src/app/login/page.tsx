@@ -13,6 +13,12 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      document.title = "Sign In (Admin) | Mittified Media";
+    }
+  }, []);
+
   const handleOAuthLogin = async () => {
     setLoading(true);
     setErrorMsg("");

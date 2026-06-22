@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import { getArticles, getCreators } from "@/lib/db";
+import { BASE_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const articles = await getArticles();
-  const creators = await getCreators();
+  // Fetch top 30 creators and latest 30 articles to prevent overwhelming LLM contexts
+  const articles = await getArticles(30);
+  const creators = await getCreators(30);
 
-  const baseUrl = "https://mittified.studio";
+  const baseUrl = BASE_URL;
 
   // Build Markdown Summary
   let content = `# Mittified Media Hub — LLM Discoverability Endpoint

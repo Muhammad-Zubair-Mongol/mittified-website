@@ -1,9 +1,19 @@
 import React from "react";
+import type { Metadata } from "next";
+import { BASE_URL } from "@/lib/config";
 import Link from "next/link";
 import { getCreators } from "@/lib/db";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ArrowLeft, Scale } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Terms of Use | Mittified Media",
+  description: "Read the Terms of Use for Mittified Media Hub, specifying the terms governing the creator database access, informational boundaries, and disclaimer of liability.",
+  alternates: {
+    canonical: `${BASE_URL}/terms`,
+  },
+};
 
 export const revalidate = 900; // 15 mins page revalidation (ISR)
 
